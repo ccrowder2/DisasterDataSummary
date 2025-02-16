@@ -19,29 +19,33 @@ window.handleOnLoad = async function handleOnLoad() {
     </nav>
       
     <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-8 vh-100 overflow-auto">
-                <div id="svg-container1">
-                        <p>Graph Loading</p>
+    <div class="row">
+        <div class="col-md-8 vh-100 overflow-auto">
+            <div id="svg-container1">
+                <p>Graph Loading</p>
+            </div>
+
+            <div class="row d-flex justify-content-between">
+                <div class="col-md-6">
+                    <div id="svg-container2">
+                    </div>
                 </div>
-                <div class="col-md-5">
-                <div id="svg-container2">
-                </div>
-                </div>
-                <div class="col-md-5 ms-auto">
-                <div id="svg-container3">
-                        <p>Graph Loading</p>
-                </div>
-                </div>
-                <div id="svg-container4">
-                        <p>Graph Loading</p>
+                <div class="col-md-6">
+                    <div id="svg-container3">
+                    </div>
                 </div>
             </div>
-            <div class="col-md-4 vh-100 overflow-auto">
-                <div id="rowData"></div>
+
+            <div id="svg-container4">
             </div>
         </div>
+
+        <div class="col-md-4 vh-100 overflow-auto">
+            <div id="rowData"></div>
+        </div>
     </div>
+</div>
+
     `
     document.getElementById('main').innerHTML = html;
     await fetchAllAPIData()
