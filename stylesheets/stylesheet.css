@@ -14,22 +14,22 @@ body, html {
 /* Container takes up the rest of the page height (below navbar) */
 .container {
     height: calc(100vh - 70px); /* Full height minus navbar height */
-    padding: 0;
 }
 
 /* Row takes full height, ensuring proper layout */
 .row {
     height: 100%;
-    padding-top: 65px;
 }
 
 /* Columns for the scrollable boxes */
 .col-md-8 {
     height: 100%; /* Full height for the left column containing graphs */
+    padding-top: 65px;
 }
 
 .col-md-4 {
     height: 100%; /* Full height for the right column */
+    padding-top: 65px;
 }
 
 /* Scrollable box style */
@@ -50,6 +50,10 @@ body, html {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+#svg-container2{
+    padding-left:20px;
 }
 
 /* Individual graph container styling */

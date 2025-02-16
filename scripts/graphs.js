@@ -159,13 +159,14 @@ export function createPieChartForTypes(fipsStateCode) {
     container.select("#tooltip").remove();
 
     // Append a small, centered title
+    /*
     container.append("div")
         .attr("id", "chart-title")
         .style("text-align", "center")
         .style("font-size", "14px")
         .style("font-weight", "bold")
         .style("margin-bottom", "5px")
-        .text(`Types of Natural Disasters in ${getStateAbbreviationByFips(fipsStateCode)}`);
+        .text(`Types of Natural Disasters in ${getStateAbbreviationByFips(fipsStateCode)}`);*/
 
     // Create SVG
     const svg = container.append("svg")
