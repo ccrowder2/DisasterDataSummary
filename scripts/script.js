@@ -1,6 +1,7 @@
 import { fetchFEMADisasterDeclarationsSummariesSince1968 } from './apis.js';
 import { createDisastersLineChart } from './graphs.js';
 import { disastersByFips } from './apis.js';
+import { createPieChartForTypes } from './graphs.js';
 
 window.handleOnLoad = async function handleOnLoad() {
     let html = `
@@ -23,11 +24,14 @@ window.handleOnLoad = async function handleOnLoad() {
                 <div id="svg-container1">
                         <p>Graph Loading</p>
                 </div>
+                <div class="col-md-5">
                 <div id="svg-container2">
-                        <p>Graph Loading</p>
                 </div>
+                </div>
+                <div class="col-md-5 ms-auto">
                 <div id="svg-container3">
                         <p>Graph Loading</p>
+                </div>
                 </div>
                 <div id="svg-container4">
                         <p>Graph Loading</p>
@@ -56,6 +60,7 @@ function displayAllData(fipsCode){
     // State view = false; County View = true;
     if(view == false){
         createDisastersLineChart(fipsStateCode)
+        createPieChartForTypes(fipsStateCode)
         populateDataRows(fipsStateCode,fipsCountyCode)
     } else {
         // If view is in county
@@ -77,7 +82,7 @@ export function getStateAbbreviationByFips(fipsCode) {
     }
 }
 
-export function disastersByFipsSince1968(fipsStateCode) {
+export function disastersByFipsSince1968(fipsStateCode){
     const disastersByYear = {};
     const disasters = disastersByFips[fipsStateCode];
 
@@ -99,6 +104,24 @@ export function disastersByFipsSince1968(fipsStateCode) {
     return disastersByYear;
 }
 
+export function disastersByFipsTypes(fipsStateCode) {
+    const disasters = disastersByFips[fipsStateCode];
+    const incidentTypeCounts = {};
+
+    Object.values(disasters).forEach(disaster => {
+        const incidentType = disaster.incidentType;
+
+        if (incidentTypeCounts[incidentType]) {
+            incidentTypeCounts[incidentType]++;
+        } else {
+            incidentTypeCounts[incidentType] = 1;
+        }
+    });
+
+    return incidentTypeCounts
+}
+
+
 function populateDataRows(fipsStateCode, fipsCountyCode) {
     const disastersInCounty = []
     const disasters = disastersByFips[fipsStateCode] == undefined ? 'Unknown' : Object.values(disastersByFips[fipsStateCode]);
@@ -107,7 +130,7 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
     <thead>
         <tr>
             <th scope="col">Disaster Type</th>
-            <th scope="col">Name</th>
+            <th scope="col">Area Affected</th>
             <th scope="col">Year</th>
         </tr>
     </thead>

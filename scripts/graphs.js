@@ -1,5 +1,6 @@
 import { disastersByFipsSince1968 } from './script.js';
 import { getStateAbbreviationByFips } from './script.js';
+import { disastersByFipsTypes } from "./script.js";
 
 export async function createDisastersLineChart(fipsStateCode) {
     const disastersByYear = disastersByFipsSince1968(fipsStateCode);
@@ -125,4 +126,101 @@ export async function createDisastersLineChart(fipsStateCode) {
         .attr("text-anchor", "middle")
         .style("font-size", "18px")
         .text(`Natural Disasters in ${getStateAbbreviationByFips(fipsStateCode)} Since 1968`);
+}
+
+export function createPieChartForTypes(fipsStateCode) {
+    const data = disastersByFipsTypes(fipsStateCode);
+    
+    if (!data || Object.keys(data).length === 0) {
+        console.warn("No data available for the given FIPS code");
+        return;
+    }
+
+    // Convert data into an array of objects
+    const dataEntries = Object.entries(data).map(([type, count]) => ({
+        type,
+        count
+    }));
+
+    // Calculate total disasters for percentage calculation
+    const totalDisasters = dataEntries.reduce((sum, d) => sum + d.count, 0);
+
+    // Chart dimensions
+    const width = 400;
+    const height = 400;
+    const radius = Math.min(width, height - 50) / 2;
+
+    // Select the chart container
+    const container = d3.select("#svg-container2");
+
+    // Remove previous content (SVG and title)
+    container.select("svg").remove();
+    container.select("#chart-title").remove();
+    container.select("#tooltip").remove();
+
+    // Append a small, centered title
+    container.append("div")
+        .attr("id", "chart-title")
+        .style("text-align", "center")
+        .style("font-size", "14px")
+        .style("font-weight", "bold")
+        .style("margin-bottom", "5px")
+        .text(`Types of Natural Disasters in ${getStateAbbreviationByFips(fipsStateCode)}`);
+
+    // Create SVG
+    const svg = container.append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .append("g")
+        .attr("transform", `translate(${width / 2}, ${height / 2})`); // Center the pie chart
+
+    // Create pie generator
+    const pie = d3.pie().value(d => d.count);
+    const pieData = pie(dataEntries);
+
+    // Define arc generator
+    const arc = d3.arc().innerRadius(0).outerRadius(radius);
+
+    // Color scale
+    const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+    // Create a tooltip div (outside the SVG)
+    const tooltip = d3.select("body")
+        .append("div")
+        .attr("id", "tooltip")
+        .style("position", "absolute")
+        .style("background", "#fff")
+        .style("padding", "5px 10px")
+        .style("border", "1px solid #ddd")
+        .style("border-radius", "5px")
+        .style("box-shadow", "0px 0px 5px rgba(0,0,0,0.3)")
+        .style("pointer-events", "none")
+        .style("opacity", 0);
+
+    // Draw slices
+    svg.selectAll("path")
+        .data(pieData)
+        .enter()
+        .append("path")
+        .attr("d", arc)
+        .attr("fill", d => color(d.data.type))
+        .attr("stroke", "white")
+        .style("stroke-width", "2px")
+        .on("mouseover", function (event, d) {
+            const percentage = ((d.data.count / totalDisasters) * 100).toFixed(2);
+            tooltip.style("opacity", 1)
+                .html(`<strong>${d.data.type}</strong><br>${percentage}%`)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY + 10) + "px");
+
+            d3.select(this).style("opacity", 0.7); // Highlight slice
+        })
+        .on("mousemove", function (event) {
+            tooltip.style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY + 10) + "px");
+        })
+        .on("mouseout", function () {
+            tooltip.style("opacity", 0);
+            d3.select(this).style("opacity", 1); // Restore opacity
+        });
 }
