@@ -153,27 +153,16 @@ export function createPieChartForTypes(fipsStateCode) {
     // Select the chart container
     const container = d3.select("#svg-container2");
 
-    // Remove previous content (SVG and title)
+    // Remove previous content
     container.select("svg").remove();
-    container.select("#chart-title").remove();
     container.select("#tooltip").remove();
-
-    // Append a small, centered title
-    /*
-    container.append("div")
-        .attr("id", "chart-title")
-        .style("text-align", "center")
-        .style("font-size", "14px")
-        .style("font-weight", "bold")
-        .style("margin-bottom", "5px")
-        .text(`Types of Natural Disasters in ${getStateAbbreviationByFips(fipsStateCode)}`);*/
 
     // Create SVG
     const svg = container.append("svg")
         .attr("width", width)
         .attr("height", height)
         .append("g")
-        .attr("transform", `translate(${width / 2}, ${height / 2})`); // Center the pie chart
+        .attr("transform", `translate(${width / 2}, ${height / 2})`);
 
     // Create pie generator
     const pie = d3.pie().value(d => d.count);
@@ -181,11 +170,12 @@ export function createPieChartForTypes(fipsStateCode) {
 
     // Define arc generator
     const arc = d3.arc().innerRadius(0).outerRadius(radius);
+    const labelArc = d3.arc().innerRadius(radius * 0.5).outerRadius(radius * 0.8); // Positions labels inside
 
     // Color scale
     const color = d3.scaleOrdinal(d3.schemeCategory10);
 
-    // Create a tooltip div (outside the SVG)
+    // Create tooltip
     const tooltip = d3.select("body")
         .append("div")
         .attr("id", "tooltip")
@@ -223,5 +213,21 @@ export function createPieChartForTypes(fipsStateCode) {
         .on("mouseout", function () {
             tooltip.style("opacity", 0);
             d3.select(this).style("opacity", 1); // Restore opacity
+        });
+
+    // Add labels **only for slices larger than 5%**
+    svg.selectAll("text")
+        .data(pieData)
+        .enter()
+        .append("text")
+        .attr("transform", d => `translate(${labelArc.centroid(d)})`) // Position text inside the slice
+        .attr("text-anchor", "middle")
+        .attr("font-size", "14px")
+        .attr("fill", "white") // White text for contrast
+        .style("font-weight", "bold")
+        .style("text-shadow", "1px 1px 3px rgba(0,0,0,0.5)") // Small shadow for visibility
+        .text(d => {
+            const percentage = (d.data.count / totalDisasters) * 100;
+            return percentage > 15 ? `${d.data.type}\n${percentage.toFixed(1)}%` : ""; // Show type + % if > 5%
         });
 }

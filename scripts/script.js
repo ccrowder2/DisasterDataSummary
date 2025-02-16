@@ -86,21 +86,26 @@ export function getStateAbbreviationByFips(fipsCode) {
     }
 }
 
-export function disastersByFipsSince1968(fipsStateCode){
+export function disastersByFipsSince1968(fipsStateCode) {
     const disastersByYear = {};
     const disasters = disastersByFips[fipsStateCode];
 
     if (disasters) {
-        const disasterArray = Object.values(disasters);
+        const countedDisasterNumbers = new Set();
 
-        disasterArray.forEach(obj => {
+        Object.values(disasters).forEach(obj => {
             const year = obj.year;
+            const disasterNumber = obj.disasterNumber; 
 
-            if (!disastersByYear[year]) {
-                disastersByYear[year] = 0;
+            if (!countedDisasterNumbers.has(disasterNumber)) {
+                countedDisasterNumbers.add(disasterNumber);
+
+                if (!disastersByYear[year]) {
+                    disastersByYear[year] = 0;
+                }
+
+                disastersByYear[year] += 1;
             }
-
-            disastersByYear[year] += 1;
         });
     } else {
         console.log(`No disasters found for FIPS code: ${fipsStateCode}`);
@@ -108,23 +113,31 @@ export function disastersByFipsSince1968(fipsStateCode){
     return disastersByYear;
 }
 
+
 export function disastersByFipsTypes(fipsStateCode) {
     const disasters = disastersByFips[fipsStateCode];
     const incidentTypeCounts = {};
+    const countedDisasterNumbers = new Set();
 
-    Object.values(disasters).forEach(disaster => {
-        const incidentType = disaster.incidentType;
+    if (disasters) {
+        Object.values(disasters).forEach(disaster => {
+            const disasterNumber = disaster.disasterNumber;
+            const incidentType = disaster.incidentType;
 
-        if (incidentTypeCounts[incidentType]) {
-            incidentTypeCounts[incidentType]++;
-        } else {
-            incidentTypeCounts[incidentType] = 1;
-        }
-    });
+            if (!countedDisasterNumbers.has(disasterNumber)) {
+                countedDisasterNumbers.add(disasterNumber);
 
-    return incidentTypeCounts
+                if (incidentTypeCounts[incidentType]) {
+                    incidentTypeCounts[incidentType]++;
+                } else {
+                    incidentTypeCounts[incidentType] = 1;
+                }
+            }
+        });
+    }
+
+    return incidentTypeCounts;
 }
-
 
 function populateDataRows(fipsStateCode, fipsCountyCode) {
     const disastersInCounty = []

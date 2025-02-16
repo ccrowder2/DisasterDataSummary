@@ -3,7 +3,7 @@ const hcaStateFips = ["01", "02", "06", "08", "12", "13", "16", "18", "20", "21"
 
 function cleanFEMADisasterData(disaster) {
     let newObject = {
-        id: disaster.disasterNumber || 'N/A',
+        id: disaster.id || 'N/A',
         state: disaster.state,
         fips_state_code: disaster.fipsStateCode || 'Unknown',
         fips_county_code: disaster.fipsCountyCode
@@ -11,7 +11,8 @@ function cleanFEMADisasterData(disaster) {
             : 'Unknown',
         incidentType: disaster.incidentType ? disaster.incidentType.trim() : 'Unknown',
         year: disaster.declarationDate ? new Date(disaster.declarationDate).getFullYear() : 'Unknown',
-        designatedArea: disaster.designatedArea ? disaster.designatedArea.trim() : 'Unknown'
+        designatedArea: disaster.designatedArea ? disaster.designatedArea.trim() : 'Unknown',
+        disasterNumber: disaster.disasterNumber || 'N/A'
     };
     return newObject;
 }
