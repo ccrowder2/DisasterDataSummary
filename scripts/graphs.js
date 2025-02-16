@@ -1,6 +1,7 @@
 import { disastersByFipsSince1968 } from './script.js';
 import { getStateAbbreviationByFips } from './script.js';
 import { disastersByFipsTypes } from "./script.js";
+import { getAverageDisastersPerMonth } from "./script.js"
 
 export async function createDisastersLineChart(fipsStateCode) {
     const disastersByYear = disastersByFipsSince1968(fipsStateCode);
@@ -229,5 +230,118 @@ export function createPieChartForTypes(fipsStateCode) {
         .text(d => {
             const percentage = (d.data.count / totalDisasters) * 100;
             return percentage > 15 ? `${d.data.type}\n${percentage.toFixed(1)}%` : ""; // Show type + % if > 5%
+        });
+}
+
+export function createBarChartForMonthlyAverageByState(fipsStateCode) {
+    // Fetch the data
+    const averageData = getAverageDisastersPerMonth(fipsStateCode);
+
+    // Convert object to array
+    const data = Object.entries(averageData).map(([month, average]) => ({
+        month: month,
+        average: parseFloat(average)
+    }));
+
+    // Sort data by month order (ensures Jan - Dec order)
+    data.sort((a, b) => parseInt(a.month) - parseInt(b.month));
+
+    // Get container size dynamically
+    const container = document.getElementById("svg-container4");
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    // Set margins similar to the line chart
+    const marginTop = 100;
+    const marginRight = 100;
+    const marginBottom = 50;
+    const marginLeft = 60;
+
+    // Remove previous chart if any
+    d3.select("#svg-container4").selectAll("*").remove();
+
+    // Create SVG container with dynamic size
+    const svg = d3.select("#svg-container4")
+        .append("svg")
+        .attr("width", "100%")
+        .attr("height", "100%")
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("style", `max-width: 100%; height: auto; background-color: none;`);
+
+    // Define scales
+    const xScale = d3.scaleBand()
+        .domain(data.map(d => d.month))
+        .range([marginLeft, width - marginRight])
+        .padding(0.2);
+
+    const yScale = d3.scaleLinear()
+        .domain([0, d3.max(data, d => d.average)]) // Y-axis uses max average disasters
+        .nice()
+        .range([height - marginBottom, marginTop]);
+
+    // Create bars with animation
+    svg.selectAll("rect")
+        .data(data)
+        .enter()
+        .append("rect")
+        .attr("x", d => xScale(d.month))
+        .attr("y", height - marginBottom) // Start at bottom
+        .attr("width", xScale.bandwidth())
+        .attr("height", 0) // Start with no height
+        .attr("fill", "#007bff")
+        .transition()
+        .duration(1000)
+        .attr("y", d => yScale(d.average))
+        .attr("height", d => height - marginBottom - yScale(d.average));
+
+    // Add X-axis
+    svg.append("g")
+        .attr("transform", `translate(0,${height - marginBottom})`)
+        .call(d3.axisBottom(xScale).tickFormat(d => {
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            return monthNames[parseInt(d) - 1]; // Convert "01", "02" to "Jan", "Feb"
+        }))
+        .selectAll(".tick text")
+        .style("text-anchor", "middle")
+        .style("font-size", "12px");
+
+    // Add Y-axis
+    svg.append("g")
+        .attr("transform", `translate(${marginLeft},0)`)
+        .call(d3.axisLeft(yScale).ticks(10))
+        .call(g => g.select(".domain").remove())
+        .selectAll(".tick text")
+        .style("font-size", "12px");
+
+    // Add graph title
+    svg.append("text")
+        .attr("x", width / 2)
+        .attr("y", marginTop / 2)
+        .attr("text-anchor", "middle")
+        .style("font-size", "18px")
+        .style("font-weight", "bold")
+        .text(`Avg Monthly Disasters in ${getStateAbbreviationByFips(fipsStateCode)}`);
+
+    // Tooltip setup
+    const tooltip = d3.select("#svg-container4")
+        .append("div")
+        .style("position", "absolute")
+        .style("background", "lightgray")
+        .style("padding", "5px")
+        .style("border-radius", "5px")
+        .style("display", "none");
+
+    // Add hover effects for tooltips
+    svg.selectAll("rect")
+        .on("mouseover", function (event, d) {
+            tooltip.style("display", "block")
+                .html(`<strong>Month:</strong> ${d.month}<br><strong>Avg Disasters:</strong> ${d.average}`)
+                .style("left", `${event.pageX + 10}px`)
+                .style("top", `${event.pageY - 20}px`);
+            d3.select(this).attr("fill", "#0056b3"); // Darken bar on hover
+        })
+        .on("mouseout", function () {
+            tooltip.style("display", "none");
+            d3.select(this).attr("fill", "#007bff"); // Restore original color
         });
 }

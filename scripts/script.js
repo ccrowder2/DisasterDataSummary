@@ -2,6 +2,7 @@ import { fetchFEMADisasterDeclarationsSummariesSince1968 } from './apis.js';
 import { createDisastersLineChart } from './graphs.js';
 import { disastersByFips } from './apis.js';
 import { createPieChartForTypes } from './graphs.js';
+import { createBarChartForMonthlyAverageByState } from './graphs.js';
 
 window.handleOnLoad = async function handleOnLoad() {
     let html = `
@@ -25,7 +26,7 @@ window.handleOnLoad = async function handleOnLoad() {
                 <p>Graph Loading</p>
             </div>
 
-            <div class="row d-flex justify-content-between">
+            <div class="row d-flex justify-content-between" id="row2">
                 <div class="col-md-6">
                     <div id="svg-container2">
                     </div>
@@ -35,18 +36,16 @@ window.handleOnLoad = async function handleOnLoad() {
                     </div>
                 </div>
             </div>
-
             <div id="svg-container4">
             </div>
         </div>
-
         <div class="col-md-4 vh-100 overflow-auto">
             <div id="rowData"></div>
         </div>
     </div>
 </div>
-
     `
+
     document.getElementById('main').innerHTML = html;
     await fetchAllAPIData()
     displayAllData('12001')
@@ -65,6 +64,7 @@ function displayAllData(fipsCode){
     if(view == false){
         createDisastersLineChart(fipsStateCode)
         createPieChartForTypes(fipsStateCode)
+        createBarChartForMonthlyAverageByState(fipsStateCode)
         populateDataRows(fipsStateCode,fipsCountyCode)
     } else {
         // If view is in county
@@ -180,4 +180,37 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
         html = `No data on disasters`
     }
 document.getElementById('rowData').innerHTML = html
+}
+
+export function getAverageDisastersPerMonth(fipsStateCode) {
+    const disasters = disastersByFips[fipsStateCode];
+    if (!disasters) return {};
+
+    const monthTotals = {};
+    const yearCounts = {};
+
+    Object.values(disasters).forEach(({ declarationDate }) => {
+        if (declarationDate) {
+            const date = new Date(declarationDate);
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+
+            if (!monthTotals[month]) {
+                monthTotals[month] = 0;
+                yearCounts[month] = new Set();
+            }
+
+            monthTotals[month]++;
+            yearCounts[month].add(year);
+        }
+    });
+
+    const monthlyAverages = {};
+    Object.keys(monthTotals).forEach(month => {
+        const totalDisasters = monthTotals[month];
+        const yearCount = yearCounts[month].size;
+        monthlyAverages[month] = parseFloat((totalDisasters / yearCount).toFixed(2));
+    });
+
+    return monthlyAverages;
 }

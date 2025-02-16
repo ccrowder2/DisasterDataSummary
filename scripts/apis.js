@@ -12,9 +12,18 @@ function cleanFEMADisasterData(disaster) {
         incidentType: disaster.incidentType ? disaster.incidentType.trim() : 'Unknown',
         year: disaster.declarationDate ? new Date(disaster.declarationDate).getFullYear() : 'Unknown',
         designatedArea: disaster.designatedArea ? disaster.designatedArea.trim() : 'Unknown',
-        disasterNumber: disaster.disasterNumber || 'N/A'
+        disasterNumber: disaster.disasterNumber || 'N/A',
+        declarationDate: disaster.declarationDate ? formatDate(disaster.declarationDate) : 'Unknown'
     };
     return newObject;
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Ensure two digits for month
+    const day = date.getDate().toString().padStart(2, '0'); // Ensure two digits for day
+    return `${year}-${month}-${day}`;
 }
 
 export async function fetchFEMADisasterDeclarationsSummariesSince1968() {
