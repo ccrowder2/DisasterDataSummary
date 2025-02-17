@@ -2,6 +2,7 @@ import { disastersByFipsSince1968 } from './script.js';
 import { getStateAbbreviationByFips } from './script.js';
 import { disastersByFipsTypes } from "./script.js";
 import { getAverageDisastersPerMonth } from "./script.js"
+import { getAverageDisastersPerYearByCounty } from "./script.js"
 
 export async function createDisastersLineChart(fipsStateCode) {
     const disastersByYear = disastersByFipsSince1968(fipsStateCode);
@@ -344,4 +345,106 @@ export function createBarChartForMonthlyAverageByState(fipsStateCode) {
             tooltip.style("display", "none");
             d3.select(this).attr("fill", "#007bff"); // Restore original color
         });
+}
+
+export async function loadStateMap(fipsCode) {
+    const width = 800, height = 600; // Large enough for clear visibility
+
+    // Select the SVG and set dimensions
+    const svg = d3.select("#state-map")
+        .attr("width", width)
+        .attr("height", height);
+
+    // Clear previous map
+    svg.selectAll("*").remove();
+
+    // Remove any existing tooltip (prevents duplicates)
+    d3.select("#tooltip").remove();
+
+    // Create a tooltip div
+    const tooltip = d3.select("body").append("div")
+        .attr("id", "tooltip")
+        .style("position", "absolute")
+        .style("background", "white")
+        .style("border", "1px solid black")
+        .style("padding", "5px")
+        .style("font-size", "14px")
+        .style("border-radius", "4px")
+        .style("pointer-events", "none") // Prevents interference with mouse events
+        .style("display", "none"); // Initially hidden
+
+    // Load U.S. Counties GeoJSON
+    const geojsonUrl = "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json";
+
+    try {
+        const geoData = await d3.json(geojsonUrl);
+
+        // Filter only the selected state's counties
+        const stateCounties = {
+            type: "FeatureCollection",
+            features: geoData.features.filter(d => d.properties.STATE === fipsCode)
+        };
+
+        if (stateCounties.features.length === 0) {
+            console.error("No counties found for FIPS code:", fipsCode);
+            return;
+        }
+
+        // Get average disasters per year for each county (using full 5-digit FIPS code)
+        const countyDisasterAverages = getAverageDisastersPerYearByCounty(fipsCode);
+        console.log("County Disaster Averages:", countyDisasterAverages);  // Debug log for disaster averages
+
+        // Get the minimum and maximum values for the disaster averages
+        const minDisasters = d3.min(Object.values(countyDisasterAverages));
+        const maxDisasters = d3.max(Object.values(countyDisasterAverages));
+        console.log("Disaster Min and Max:", minDisasters, maxDisasters);  // Debug log for min and max
+
+        // Create a logarithmic color scale (this helps make small differences in the data more noticeable)
+        const colorScale = d3.scaleSequential(d3.interpolateReds)
+            .domain([Math.log(minDisasters + 1), Math.log(maxDisasters + 1)]); // Log scale for enhanced contrast
+
+        console.log("Color Scale Domain:", colorScale.domain());  // Debug log for color scale domain
+
+        // Create a projection that fits the state inside the SVG
+        const projection = d3.geoMercator().fitSize([width, height], stateCounties);
+        const path = d3.geoPath().projection(projection);
+
+        // Draw counties
+        svg.selectAll("path")
+            .data(stateCounties.features)
+            .enter().append("path")
+            .attr("d", path)
+            .attr("fill", function (d) {
+                // Combine state and county FIPS code into a 5-digit code
+                const countyFips = d.properties.STATE + d.properties.COUNTY;  // Full 5-digit FIPS code
+                const avgDisasters = countyDisasterAverages[countyFips];
+
+                // Log the value of the average disasters for debugging
+                console.log(`County: ${d.properties.NAME}, FIPS: ${countyFips}, Avg Disasters: ${avgDisasters}`);
+
+                // Color the counties based on the average disasters per year using the logarithmic scale
+                return avgDisasters ? colorScale(Math.log(avgDisasters + 1)) : "#cccccc"; // Default gray if no data
+            })
+            .attr("stroke", "#000")  // Border color
+            .attr("stroke-width", 1)
+            .on("mouseover", function (event, d) {
+                // Display tooltip with county name and average disasters
+                const countyFips = d.properties.STATE + d.properties.COUNTY;  // Full 5-digit FIPS code
+                const avgDisasters = countyDisasterAverages[countyFips];
+                tooltip.style("display", "block")
+                    .html(`<strong>${d.properties.NAME} County</strong><br>Average Disasters per Year: ${avgDisasters || 'No data'}`)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 10) + "px");
+            })
+            .on("mousemove", function (event) {
+                tooltip.style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 10) + "px");
+            })
+            .on("mouseout", function () {
+                tooltip.style("display", "none"); // Hide tooltip
+            });
+
+    } catch (error) {
+        console.error("Error loading GeoJSON:", error);
+    }
 }

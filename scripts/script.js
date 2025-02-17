@@ -3,6 +3,7 @@ import { createDisastersLineChart } from './graphs.js';
 import { disastersByFips } from './apis.js';
 import { createPieChartForTypes } from './graphs.js';
 import { createBarChartForMonthlyAverageByState } from './graphs.js';
+import { loadStateMap } from './graphs.js';
 
 window.handleOnLoad = async function handleOnLoad() {
     let html = `
@@ -28,15 +29,19 @@ window.handleOnLoad = async function handleOnLoad() {
 
             <div class="row d-flex justify-content-between" id="row2">
                 <div class="col-md-6">
-                    <div id="svg-container2">
+                    <div id="svg-container2" class="chart-box">
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <div id="svg-container3">
+                    <div id="svg-container3" class="chart-box">
                     </div>
                 </div>
             </div>
-            <div id="svg-container4">
+
+            <div id="svg-container4" class="chart-box">
+            </div>
+            <div id="svg-container5" class="chart-box">
+                <svg id="state-map"></svg>
             </div>
         </div>
         <div class="col-md-4 vh-100 overflow-auto">
@@ -65,6 +70,8 @@ function displayAllData(fipsCode){
         createDisastersLineChart(fipsStateCode)
         createPieChartForTypes(fipsStateCode)
         createBarChartForMonthlyAverageByState(fipsStateCode)
+        loadStateMap(fipsStateCode)
+        console.log(getAverageDisastersPerYearByCounty(fipsStateCode))
         populateDataRows(fipsStateCode,fipsCountyCode)
     } else {
         // If view is in county
@@ -213,4 +220,70 @@ export function getAverageDisastersPerMonth(fipsStateCode) {
     });
 
     return monthlyAverages;
+}
+
+export function getAverageDisastersPerYearByCounty(fipsStateCode) {
+    const disasters = disastersByFips[fipsStateCode]; // Get disasters for the state
+
+    if (!disasters) {
+        console.log(`No disaster data found for state FIPS code: ${fipsStateCode}`);
+        return {}; 
+    }
+
+    const countyDisasterCounts = {}; 
+    const countedDisasterIds = new Set(); // To track unique disaster IDs
+
+    // Loop through each disaster in the state
+    Object.values(disasters).forEach(disaster => {
+        const disasterId = disaster.id; 
+        const declarationDate = disaster.declarationDate;
+        const countyFips = disaster.fips_county_code;  // County FIPS code from the disaster data
+
+        if (!disasterId || !declarationDate || !countyFips) {
+            console.log("Skipping disaster due to missing data:", disaster);
+            return; // Skip if any required data is missing
+        }
+
+        // Combine state FIPS code and county FIPS code to form a 5-digit FIPS code
+        const fullFipsCode = fipsStateCode + countyFips;
+
+        // Skip disaster if it's already counted by its disasterId
+        if (!countedDisasterIds.has(disasterId)) {
+            const year = new Date(declarationDate).getFullYear();
+
+            // Initialize county data if it doesn't exist yet
+            if (!countyDisasterCounts[fullFipsCode]) {
+                countyDisasterCounts[fullFipsCode] = {
+                    yearTotals: {}, // Store disaster counts per year for this county
+                    disasterIds: new Set() // Track unique disaster IDs for this county
+                };
+            }
+
+            const countyData = countyDisasterCounts[fullFipsCode];
+
+            // Count disasters for this county by year
+            countyData.yearTotals[year] = (countyData.yearTotals[year] || 0) + 1;
+            countyData.disasterIds.add(disasterId);
+
+            // Add disasterId to the global set to ensure no duplicates are counted
+            countedDisasterIds.add(disasterId);
+        }
+    });
+
+    // Calculate the average disasters per year for each county
+    const countyAverages = {};
+
+    Object.keys(countyDisasterCounts).forEach(countyFips => {
+        const { yearTotals } = countyDisasterCounts[countyFips];
+
+        const totalYears = Object.keys(yearTotals).length;
+        const totalDisasters = Object.values(yearTotals).reduce((sum, count) => sum + count, 0);
+
+        // Calculate the average number of disasters per year
+        const averageDisastersPerYear = totalYears > 0 ? parseFloat((totalDisasters / totalYears).toFixed(2)) : 0;
+
+        countyAverages[countyFips] = averageDisastersPerYear;
+    });
+
+    return countyAverages;
 }

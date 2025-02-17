@@ -58,4 +58,43 @@ export async function fetchFEMADisasterDeclarationsSummariesSince1968() {
             hasMoreData = false;
         }
     }
+    await removeInvalidFipsData()
+}
+
+async function removeInvalidFipsData() {
+    // Load GeoJSON counties data (you can load this from a URL or from a local file)
+    const geojsonUrl = "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json";
+    const geoData = await d3.json(geojsonUrl);
+
+    // Extract valid county FIPS codes from the GeoJSON
+    const validFipsCodes = new Set();
+    geoData.features.forEach(feature => {
+        // Combine state and county FIPS codes to create the full FIPS code
+        const countyFips = feature.properties.STATE + feature.properties.COUNTY;
+        validFipsCodes.add(countyFips);
+    });
+
+    // Iterate over disastersByFips and delete invalid FIPS code entries
+    Object.keys(disastersByFips).forEach(stateFipsCode => {
+        const stateDisasters = disastersByFips[stateFipsCode];
+
+        // Iterate over each disaster and remove invalid entries
+        Object.keys(stateDisasters).forEach(disasterId => {
+            const disaster = stateDisasters[disasterId];
+            const countyFips = disaster.fips_county_code;  // County FIPS code from disaster data
+
+            // Combine state FIPS code and county FIPS code to create the full FIPS code
+            const fullFipsCode = stateFipsCode + countyFips;
+
+            // If the full FIPS code is invalid, delete the disaster entry
+            if (!validFipsCodes.has(fullFipsCode)) {
+                delete stateDisasters[disasterId];  // Remove invalid disaster
+            }
+        });
+
+        // If a state has no valid disasters, delete the state entry
+        if (Object.keys(stateDisasters).length === 0) {
+            delete disastersByFips[stateFipsCode];  // Remove state if no valid disasters exist
+        }
+    });
 }
