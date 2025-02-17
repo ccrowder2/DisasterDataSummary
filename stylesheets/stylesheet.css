@@ -67,13 +67,16 @@ body, html {
 }
 
 #svg-container5{
-    padding-top: 50px;
+    margin-top: 25px;
+    height: 100%;
     height:700px;
     background-color: aliceblue;
 }
 
 #state-map{
-    padding-top: 0px;
+    margin-top: 50px;
+    height: 700px;
+    height: 100%;
 }
 
 /* Responsive adjustments for the graphs */

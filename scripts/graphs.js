@@ -5,6 +5,7 @@ import { getAverageDisastersPerMonth } from "./script.js"
 import { getAverageDisastersPerYearByCounty } from "./script.js"
 import { disastersByCountyFipsSince1968 } from "./script.js"
 import { getCountyNameByFips } from "./script.js"
+import { getAverageCountyDisastersPerMonth } from "./script.js"
 
 export async function createDisastersStackedAreaChart(fipsStateCode, fipsCountyCode) {
     // Fetch state and county disaster data
@@ -295,15 +296,26 @@ export function createPieChartForTypes(fipsStateCode) {
         });
 }
 
-export function createBarChartForMonthlyAverageByState(fipsStateCode) {
-    // Fetch the data
-    const averageData = getAverageDisastersPerMonth(fipsStateCode);
+export function createBarChartForMonthlyAverageByStateAndCounty(fipsStateCode, fipsCountyCode) {
+    // Fetch the data for the state and county
+    const stateAverageData = getAverageDisastersPerMonth(fipsStateCode);
+    const countyAverageData = getAverageCountyDisastersPerMonth(fipsStateCode, fipsCountyCode);
 
-    // Convert object to array
-    const data = Object.entries(averageData).map(([month, average]) => ({
+    // Convert object to array for both state and county
+    const stateData = Object.entries(stateAverageData).map(([month, average]) => ({
         month: month,
-        average: parseFloat(average)
+        average: parseFloat(average),
+        type: 'State'
     }));
+
+    const countyData = Object.entries(countyAverageData).map(([month, average]) => ({
+        month: month,
+        average: parseFloat(average),
+        type: 'County'
+    }));
+
+    // Merge state and county data
+    const data = [...stateData, ...countyData];
 
     // Sort data by month order (ensures Jan - Dec order)
     data.sort((a, b) => parseInt(a.month) - parseInt(b.month));
@@ -341,16 +353,21 @@ export function createBarChartForMonthlyAverageByState(fipsStateCode) {
         .nice()
         .range([height - marginBottom, marginTop]);
 
+    // Define color scale for state and county
+    const colorScale = d3.scaleOrdinal()
+        .domain(['State', 'County'])
+        .range(['purple', '#00BFFF']); // Tomato for State, LimeGreen for County
+
     // Create bars with animation
     svg.selectAll("rect")
         .data(data)
         .enter()
         .append("rect")
-        .attr("x", d => xScale(d.month))
+        .attr("x", d => xScale(d.month) + (d.type === 'County' ? xScale.bandwidth() / 2 : 0)) // Offset county bars
         .attr("y", height - marginBottom) // Start at bottom
-        .attr("width", xScale.bandwidth())
+        .attr("width", xScale.bandwidth() / 2) // Set width for side-by-side bars
         .attr("height", 0) // Start with no height
-        .attr("fill", "#007bff")
+        .attr("fill", d => colorScale(d.type))
         .transition()
         .duration(1000)
         .attr("y", d => yScale(d.average))
@@ -395,18 +412,42 @@ export function createBarChartForMonthlyAverageByState(fipsStateCode) {
 
     // Add hover effects for tooltips
     svg.selectAll("rect")
-        .on("mouseover", function (event, d) {
+        .on("mouseover", async function (event, d) {
             const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const name = d.type === 'State' ? getStateAbbreviationByFips(fipsStateCode) : await getCountyNameByFips(fipsStateCode,fipsCountyCode);
             tooltip.style("display", "block")
-                .html(`<strong>Month:</strong> ${monthNames[parseInt(d.month) - 1]}<br><strong>Avg Disasters:</strong> ${d.average}`)
+                .html(`<strong>Month:</strong> ${monthNames[parseInt(d.month) - 1]}<br><strong>Avg Disasters:</strong> ${d.average}<br><strong>${d.type}:</strong> ${name}`)
                 .style("left", `${event.pageX + 10}px`)
                 .style("top", `${event.pageY - 20}px`);
             d3.select(this).attr("fill", "#0056b3"); // Darken bar on hover
         })
         .on("mouseout", function () {
             tooltip.style("display", "none");
-            d3.select(this).attr("fill", "#007bff"); // Restore original color
+            d3.select(this).attr("fill", d => colorScale(d.type)); // Restore original color
         });
+
+    // Add legend
+    const legend = svg.append("g")
+        .attr("transform", `translate(${width - marginRight + 20}, ${marginTop})`);
+
+    legend.selectAll("rect")
+        .data(['State', 'County'])
+        .enter()
+        .append("rect")
+        .attr("x", 0)
+        .attr("y", (d, i) => i * 30)
+        .attr("width", 20)
+        .attr("height", 20)
+        .attr("fill", d => colorScale(d));
+
+    legend.selectAll("text")
+        .data(['State', 'County'])
+        .enter()
+        .append("text")
+        .attr("x", 30)
+        .attr("y", (d, i) => i * 30 + 15)
+        .style("font-size", "12px")
+        .text(d => d);
 }
 
 export async function loadStateMap(fipsCode) {
@@ -498,6 +539,49 @@ export async function loadStateMap(fipsCode) {
             .on("mouseout", function () {
                 tooltip.style("display", "none"); // Hide tooltip
             });
+
+        // Dynamically position the title with more space above the map
+        const stateAbbreviation = getStateAbbreviationByFips(fipsCode);
+        const titlePadding = 0;  // More padding for a taller title
+        const titleYPosition = titlePadding;  // You can adjust this value to suit your needs
+
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", titleYPosition)
+            .attr("text-anchor", "middle")
+            .style("font-size", "22px")  // Adjust font size for a taller title
+            .style("font-weight", "bold")
+            .text(`Average Natural Disasters By County in ${stateAbbreviation}`);
+
+        // Add the color scale legend on the right side of the map
+        const legendWidth = 20;
+        const legendHeight = 200;
+        const legendMargin = 40;
+
+        const legend = svg.append("g")
+            .attr("transform", `translate(${width - legendMargin}, ${titlePadding + 20})`);  // Adjusted for space
+
+        const legendScale = d3.scaleLinear()
+            .domain([Math.log(minDisasters + 1), Math.log(maxDisasters + 1)])
+            .range([0, legendHeight]);
+
+        const legendAxis = d3.axisRight(legendScale)
+            .ticks(5)
+            .tickFormat(d => Math.round(Math.exp(d)));  // Convert back from log scale for easier reading
+
+        legend.append("g")
+            .call(legendAxis);
+
+        // Add color rectangles to the legend to match the color scale
+        const legendColors = d3.range(minDisasters, maxDisasters, (maxDisasters - minDisasters) / 5);
+        legend.selectAll("rect")
+            .data(legendColors)
+            .enter().append("rect")
+            .attr("x", -legendWidth)
+            .attr("y", d => legendScale(Math.log(d + 1)))
+            .attr("width", legendWidth)
+            .attr("height", legendHeight / 5)
+            .style("fill", d => colorScale(Math.log(d + 1)));
 
     } catch (error) {
         console.error("Error loading GeoJSON:", error);

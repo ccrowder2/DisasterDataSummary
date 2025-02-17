@@ -2,7 +2,7 @@ import { fetchFEMADisasterDeclarationsSummariesSince1968 } from './apis.js';
 import { createDisastersStackedAreaChart } from './graphs.js';
 import { disastersByFips } from './apis.js';
 import { createPieChartForTypes } from './graphs.js';
-import { createBarChartForMonthlyAverageByState } from './graphs.js';
+import { createBarChartForMonthlyAverageByStateAndCounty } from './graphs.js';
 import { loadStateMap } from './graphs.js';
 
 window.handleOnLoad = async function handleOnLoad() {
@@ -69,10 +69,10 @@ async function displayAllData(fipsCode){
     if(view == false){
         createDisastersStackedAreaChart(fipsStateCode, fipsCountyCode)
         createPieChartForTypes(fipsStateCode)
-        createBarChartForMonthlyAverageByState(fipsStateCode)
+        createBarChartForMonthlyAverageByStateAndCounty(fipsStateCode,fipsCountyCode)
         loadStateMap(fipsStateCode)
         populateDataRows(fipsStateCode,fipsCountyCode)
-        console.log(await getCountyByFips(fipsStateCode, fipsCountyCode))
+
     } else {
         // If view is in county
     }
@@ -252,6 +252,52 @@ export function getAverageDisastersPerMonth(fipsStateCode) {
     const disasterNumbersByMonth = {}; // To track disaster numbers per month
 
     Object.values(disasters).forEach(({ disasterNumber, declarationDate }) => {
+        if (declarationDate && disasterNumber) {
+            const date = new Date(declarationDate);
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+
+            // Initialize the month totals, year counts, and disaster number set if not already done
+            if (!monthTotals[month]) {
+                monthTotals[month] = 0;
+                yearCounts[month] = new Set();
+                disasterNumbersByMonth[month] = new Set(); // Add a Set to track disasterNumbers for this month
+            }
+
+            // Only count the disaster if its number has not been encountered for this month
+            if (!disasterNumbersByMonth[month].has(disasterNumber)) {
+                monthTotals[month]++; // Increment the disaster count for the month
+                disasterNumbersByMonth[month].add(disasterNumber); // Mark this disasterNumber as counted
+            }
+
+            // Track the year for the month (to avoid counting the same year multiple times)
+            yearCounts[month].add(year);
+        }
+    });
+
+    // Calculate the average disasters per month
+    const monthlyAverages = {};
+    Object.keys(monthTotals).forEach(month => {
+        const totalDisasters = monthTotals[month];
+        const yearCount = yearCounts[month].size; // Get the number of unique years for that month
+        monthlyAverages[month] = parseFloat((totalDisasters / yearCount).toFixed(2)); // Calculate the average
+    });
+
+    return monthlyAverages;
+}
+
+export function getAverageCountyDisastersPerMonth(fipsStateCode, fipsCountyCode) {
+    const stateDisasters = disastersByFips[fipsStateCode];
+    if (!stateDisasters) return {};
+
+    const countyDisasters = Object.values(stateDisasters).filter(disaster => disaster.fips_county_code === fipsCountyCode);
+    if (!countyDisasters.length) return {};
+
+    const monthTotals = {};
+    const yearCounts = {};
+    const disasterNumbersByMonth = {}; // To track disaster numbers per month
+
+    countyDisasters.forEach(({ disasterNumber, declarationDate }) => {
         if (declarationDate && disasterNumber) {
             const date = new Date(declarationDate);
             const year = date.getFullYear();
