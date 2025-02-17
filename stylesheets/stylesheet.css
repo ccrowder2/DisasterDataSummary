@@ -100,10 +100,15 @@ body, html {
     margin-bottom: 5px;
 }
 
-#state-map{
+#state-map {
     margin-top: 50px;
     height: 700px;
     height: 100%;
+    position: relative; /* Add relative positioning for proper z-index management */
+}
+
+#tooltip {
+    z-index: 10000; /* Ensure it appears above other elements */
 }
 
 /* Responsive adjustments for the graphs */

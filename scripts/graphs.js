@@ -194,7 +194,7 @@ export async function createDisastersStackedAreaChart(fipsStateCode, fipsCountyC
 }
 
 // State Pie Chart
-export function createPieChartForStateTypes(fipsStateCode) {
+export async function createPieChartForStateTypes(fipsStateCode) {
     const data = disastersByFipsTypes(fipsStateCode);
     
     if (!data || Object.keys(data).length === 0) {
@@ -263,7 +263,7 @@ export function createPieChartForStateTypes(fipsStateCode) {
                 .style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY + 10) + "px");
 
-            d3.select(this).style("opacity", 0.7);
+            d3.select(this).style("opacity", 0.7); // Dim the pie slice on hover
         })
         .on("mousemove", function (event) {
             tooltip.style("left", (event.pageX + 10) + "px")
@@ -271,7 +271,7 @@ export function createPieChartForStateTypes(fipsStateCode) {
         })
         .on("mouseout", function () {
             tooltip.style("opacity", 0);
-            d3.select(this).style("opacity", 1);
+            d3.select(this).style("opacity", 1); // Restore original opacity after hover
         });
 
     svg.selectAll("text")
@@ -286,9 +286,9 @@ export function createPieChartForStateTypes(fipsStateCode) {
         .style("text-shadow", "1px 1px 3px rgba(0,0,0,0.5)")
         .text(d => {
             const percentage = (d.data.count / totalDisasters) * 100;
-            return percentage > 10 ? d.data.type : null;
+            return percentage > 10 ? d.data.type : null; // Only show label if percentage > 10%
         });
-}        
+}   
 
 // County Pie Chart
 export async function createPieChartForCountyTypes(fipsStateCode, fipsCountyCode) {
@@ -633,46 +633,16 @@ export async function loadStateMap(fipsCode) {
 
         // Dynamically position the title with more space above the map
         const stateAbbreviation = getStateAbbreviationByFips(fipsCode);
-        const titlePadding = 0;  // More padding for a taller title
-        const titleYPosition = titlePadding;  // You can adjust this value to suit your needs
+        const titlePadding = 20;  // Add more space above the title
+        const titleYPosition = titlePadding;  // Adjust title position
 
         svg.append("text")
             .attr("x", width / 2)
             .attr("y", titleYPosition)
             .attr("text-anchor", "middle")
-            .style("font-size", "22px")  // Adjust font size for a taller title
+            .style("font-size", "20px")  // Adjust font size for the title
             .style("font-weight", "bold")
             .text(`Average Natural Disasters By County in ${stateAbbreviation}`);
-
-        // Add the color scale legend on the right side of the map
-        const legendWidth = 20;
-        const legendHeight = 200;
-        const legendMargin = 40;
-
-        const legend = svg.append("g")
-            .attr("transform", `translate(${width - legendMargin}, ${titlePadding + 20})`);  // Adjusted for space
-
-        const legendScale = d3.scaleLinear()
-            .domain([Math.log(minDisasters + 1), Math.log(maxDisasters + 1)])
-            .range([0, legendHeight]);
-
-        const legendAxis = d3.axisRight(legendScale)
-            .ticks(5)
-            .tickFormat(d => Math.round(Math.exp(d)));  // Convert back from log scale for easier reading
-
-        legend.append("g")
-            .call(legendAxis);
-
-        // Add color rectangles to the legend to match the color scale
-        const legendColors = d3.range(minDisasters, maxDisasters, (maxDisasters - minDisasters) / 5);
-        legend.selectAll("rect")
-            .data(legendColors)
-            .enter().append("rect")
-            .attr("x", -legendWidth)
-            .attr("y", d => legendScale(Math.log(d + 1)))
-            .attr("width", legendWidth)
-            .attr("height", legendHeight / 5)
-            .style("fill", d => colorScale(Math.log(d + 1)));
 
     } catch (error) {
         console.error("Error loading GeoJSON:", error);
