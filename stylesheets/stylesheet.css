@@ -52,10 +52,6 @@ body, html {
     justify-content: center;
 }
 
-#svg-container2{
-    padding-left:20px;
-}
-
 /* Individual graph container styling */
 #svg-container1, #svg-container2, #svg-container3, #svg-container4, #svg-container5 {
     width: 100%;
@@ -66,11 +62,42 @@ body, html {
     border-radius: 8px; /* Rounded corners for the graph containers */
 }
 
+#svg-container2 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start; /* Ensures the chart starts near the top */
+    text-align: center;
+    padding-top: 10px; /* Adds spacing at the top */
+}
+
+#svg-container3 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start; /* Align content towards the top */
+    text-align: center;
+    padding-top: 10px; /* Keeps space at the top */
+}
+
 #svg-container5{
     margin-top: 25px;
     height: 100%;
     height:700px;
     background-color: aliceblue;
+}
+
+.charts-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+#chart-title {
+    font-size: 20px; /* Adjust this value as needed */
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
 }
 
 #state-map{

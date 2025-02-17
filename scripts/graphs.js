@@ -6,6 +6,7 @@ import { getAverageDisastersPerYearByCounty } from "./script.js"
 import { disastersByCountyFipsSince1968 } from "./script.js"
 import { getCountyNameByFips } from "./script.js"
 import { getAverageCountyDisastersPerMonth } from "./script.js"
+import { disasterTypesByFipsCounty } from "./script.js"
 
 export async function createDisastersStackedAreaChart(fipsStateCode, fipsCountyCode) {
     // Fetch state and county disaster data
@@ -192,7 +193,8 @@ export async function createDisastersStackedAreaChart(fipsStateCode, fipsCountyC
     });
 }
 
-export function createPieChartForTypes(fipsStateCode) {
+// State Pie Chart
+export function createPieChartForStateTypes(fipsStateCode) {
     const data = disastersByFipsTypes(fipsStateCode);
     
     if (!data || Object.keys(data).length === 0) {
@@ -200,46 +202,40 @@ export function createPieChartForTypes(fipsStateCode) {
         return;
     }
 
-    // Convert data into an array of objects
-    const dataEntries = Object.entries(data).map(([type, count]) => ({
-        type,
-        count
-    }));
-
-    // Calculate total disasters for percentage calculation
+    const dataEntries = Object.entries(data).map(([type, count]) => ({ type, count }));
     const totalDisasters = dataEntries.reduce((sum, d) => sum + d.count, 0);
 
-    // Chart dimensions
     const width = 400;
-    const height = 400;
-    const radius = Math.min(width, height - 50) / 2;
+    const height = 425; // Match county chart size
+    const radius = Math.min(width, height - 100) / 2;
 
-    // Select the chart container
     const container = d3.select("#svg-container2");
-
-    // Remove previous content
     container.select("svg").remove();
     container.select("#tooltip").remove();
+    container.select("#chart-title").remove();
 
-    // Create SVG
+    container.append("h3")
+    .attr("id", "chart-title")
+    .style("margin", "0 auto")
+    .style("text-align", "center")
+    .style("width", "100%")
+    .style("padding", "5px 0") // Reduce padding to pull the chart up
+    .text(`Disaster Types in ${getStateAbbreviationByFips(fipsStateCode)}`);
+
     const svg = container.append("svg")
         .attr("width", width)
         .attr("height", height)
         .append("g")
-        .attr("transform", `translate(${width / 2}, ${height / 2})`);
+        .attr("transform", `translate(${width / 2}, ${height / 2.5})`);
 
-    // Create pie generator
     const pie = d3.pie().value(d => d.count);
     const pieData = pie(dataEntries);
 
-    // Define arc generator
     const arc = d3.arc().innerRadius(0).outerRadius(radius);
-    const labelArc = d3.arc().innerRadius(radius * 0.5).outerRadius(radius * 0.8); // Positions labels inside
+    const labelArc = d3.arc().innerRadius(radius * 0.5).outerRadius(radius * 0.8);
 
-    // Color scale
     const color = d3.scaleOrdinal(d3.schemeCategory10);
 
-    // Create tooltip
     const tooltip = d3.select("body")
         .append("div")
         .attr("id", "tooltip")
@@ -252,7 +248,6 @@ export function createPieChartForTypes(fipsStateCode) {
         .style("pointer-events", "none")
         .style("opacity", 0);
 
-    // Draw slices
     svg.selectAll("path")
         .data(pieData)
         .enter()
@@ -268,7 +263,7 @@ export function createPieChartForTypes(fipsStateCode) {
                 .style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY + 10) + "px");
 
-            d3.select(this).style("opacity", 0.7); // Highlight slice
+            d3.select(this).style("opacity", 0.7);
         })
         .on("mousemove", function (event) {
             tooltip.style("left", (event.pageX + 10) + "px")
@@ -276,25 +271,121 @@ export function createPieChartForTypes(fipsStateCode) {
         })
         .on("mouseout", function () {
             tooltip.style("opacity", 0);
-            d3.select(this).style("opacity", 1); // Restore opacity
+            d3.select(this).style("opacity", 1);
         });
 
-    // Add labels **only for slices larger than 5%**
     svg.selectAll("text")
         .data(pieData)
         .enter()
         .append("text")
-        .attr("transform", d => `translate(${labelArc.centroid(d)})`) // Position text inside the slice
+        .attr("transform", d => `translate(${labelArc.centroid(d)})`)
         .attr("text-anchor", "middle")
         .attr("font-size", "14px")
-        .attr("fill", "white") // White text for contrast
+        .attr("fill", "white")
         .style("font-weight", "bold")
-        .style("text-shadow", "1px 1px 3px rgba(0,0,0,0.5)") // Small shadow for visibility
+        .style("text-shadow", "1px 1px 3px rgba(0,0,0,0.5)")
         .text(d => {
             const percentage = (d.data.count / totalDisasters) * 100;
-            return percentage > 15 ? `${d.data.type} - ${percentage.toFixed(1)}%` : ""; // Show type + % if > 5%
+            return percentage > 10 ? d.data.type : null;
         });
-}
+}        
+
+// County Pie Chart
+export async function createPieChartForCountyTypes(fipsStateCode, fipsCountyCode) {
+    const data = disasterTypesByFipsCounty(fipsStateCode, fipsCountyCode);
+    
+    if (!data || Object.keys(data).length === 0) {
+        console.warn("No data available for the given FIPS code");
+        return;
+    }
+
+    const dataEntries = Object.entries(data).map(([type, count]) => ({ type, count }));
+    const totalDisasters = dataEntries.reduce((sum, d) => sum + d.count, 0);
+
+    const width = 400;
+    const height = 425; // Match county chart size
+    const radius = Math.min(width, height - 100) / 2;
+
+    const container = d3.select("#svg-container3");
+    container.select("svg").remove();
+    container.select("#tooltip").remove();
+    container.select("#chart-title").remove();
+
+    container.append("h3")
+    .attr("id", "chart-title")
+    .style("margin", "0 auto")
+    .style("text-align", "center")
+    .style("width", "100%")
+    .style("padding", "5px 0") // Reduce padding to pull the chart up
+    .text(`Disaster Types in ${await getCountyNameByFips(fipsStateCode,fipsCountyCode)} County`);
+
+    const svg = container.append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .append("g")
+        .attr("transform", `translate(${width / 2}, ${height / 2.5})`);
+
+    const pie = d3.pie().value(d => d.count);
+    const pieData = pie(dataEntries);
+
+    const arc = d3.arc().innerRadius(0).outerRadius(radius);
+    const labelArc = d3.arc().innerRadius(radius * 0.5).outerRadius(radius * 0.8);
+
+    const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+    const tooltip = d3.select("body")
+        .append("div")
+        .attr("id", "tooltip")
+        .style("position", "absolute")
+        .style("background", "#fff")
+        .style("padding", "5px 10px")
+        .style("border", "1px solid #ddd")
+        .style("border-radius", "5px")
+        .style("box-shadow", "0px 0px 5px rgba(0,0,0,0.3)")
+        .style("pointer-events", "none")
+        .style("opacity", 0);
+
+    svg.selectAll("path")
+        .data(pieData)
+        .enter()
+        .append("path")
+        .attr("d", arc)
+        .attr("fill", d => color(d.data.type))
+        .attr("stroke", "white")
+        .style("stroke-width", "2px")
+        .on("mouseover", function (event, d) {
+            const percentage = ((d.data.count / totalDisasters) * 100).toFixed(2);
+            tooltip.style("opacity", 1)
+                .html(`<strong>${d.data.type}</strong><br>${percentage}%`)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY + 10) + "px");
+
+            d3.select(this).style("opacity", 0.7);
+        })
+        .on("mousemove", function (event) {
+            tooltip.style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY + 10) + "px");
+        })
+        .on("mouseout", function () {
+            tooltip.style("opacity", 0);
+            d3.select(this).style("opacity", 1);
+        });
+
+    svg.selectAll("text")
+        .data(pieData)
+        .enter()
+        .append("text")
+        .attr("transform", d => `translate(${labelArc.centroid(d)})`)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "14px")
+        .attr("fill", "white")
+        .style("font-weight", "bold")
+        .style("text-shadow", "1px 1px 3px rgba(0,0,0,0.5)")
+        .text(d => {
+            const percentage = (d.data.count / totalDisasters) * 100;
+            return percentage > 10 ? d.data.type : null;
+        });
+} 
 
 export function createBarChartForMonthlyAverageByStateAndCounty(fipsStateCode, fipsCountyCode) {
     // Fetch the data for the state and county

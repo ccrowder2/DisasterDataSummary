@@ -1,10 +1,10 @@
 import { fetchFEMADisasterDeclarationsSummariesSince1968 } from './apis.js';
 import { createDisastersStackedAreaChart } from './graphs.js';
 import { disastersByFips } from './apis.js';
-import { createPieChartForTypes } from './graphs.js';
+import { createPieChartForStateTypes } from './graphs.js';
 import { createBarChartForMonthlyAverageByStateAndCounty } from './graphs.js';
 import { loadStateMap } from './graphs.js';
-
+import { createPieChartForCountyTypes } from "./graphs.js"
 window.handleOnLoad = async function handleOnLoad() {
     let html = `
      <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
@@ -68,7 +68,9 @@ async function displayAllData(fipsCode){
     // State view = false; County View = true;
     if(view == false){
         createDisastersStackedAreaChart(fipsStateCode, fipsCountyCode)
-        createPieChartForTypes(fipsStateCode)
+        createPieChartForStateTypes(fipsStateCode)
+        createPieChartForCountyTypes(fipsStateCode, fipsCountyCode)
+        console.log(disasterTypesByFipsCounty(fipsStateCode,fipsCountyCode))
         createBarChartForMonthlyAverageByStateAndCounty(fipsStateCode,fipsCountyCode)
         loadStateMap(fipsStateCode)
         populateDataRows(fipsStateCode,fipsCountyCode)
@@ -79,10 +81,10 @@ async function displayAllData(fipsCode){
 }
 
 const fipsToAbbreviation = {
-    "01": "AL", "06": "CA", "08": "CO", "12": "FL", "13": "GA", 
-    "16": "ID", "18": "IN", "20": "KS", "21": "KY", "22": "LA", 
-    "29": "MO", "28": "MS", "37": "NC", "32": "NV", "33": "NH", 
-    "45": "SC", "47": "TN", "48": "TX", "49": "UT", "51": "VA"
+    "01": "Alabama", "06": "California", "08": "Colorado", "12": "Florida", "13": "Georgia", 
+    "16": "Idaho", "18": "Indiana", "20": "Kansas", "21": "Kentucky", "22": "Louisiana", 
+    "29": "Missouri", "28": "Mississippi", "37": "North Carolina", "32": "Nevada", "33": "New Hampshire", 
+    "45": "South Carolina", "47": "Tennessee", "48": "Texas", "49": "Utah", "51": "Virginia"
 };
 
 export async function getCountyNameByFips(stateFips, countyFips) {
@@ -174,6 +176,7 @@ export function disastersByCountyFipsSince1968(fipsStateCode, fipsCountyCode) {
 }
 
 // Pie Chart Data
+// Disaster By Types for State
 export function disastersByFipsTypes(fipsStateCode) {
     const disasters = disastersByFips[fipsStateCode];
     const incidentTypeCounts = {};
@@ -195,7 +198,32 @@ export function disastersByFipsTypes(fipsStateCode) {
             }
         });
     }
+    return incidentTypeCounts;
+}
 
+// DisasterByType for County
+export function disasterTypesByFipsCounty(fipsStateCode, fipsCountyCode) {
+    const disasters = disastersByFips[fipsStateCode];
+    const incidentTypeCounts = {};
+    const countedDisasterNumbers = new Set();
+
+    if (disasters) {
+        Object.values(disasters).forEach(disaster => {
+            const disasterNumber = disaster.disasterNumber;
+            const incidentType = disaster.incidentType;
+            const countyFips = disaster.fips_county_code; // Ensure correct property reference
+
+            if (countyFips === fipsCountyCode && !countedDisasterNumbers.has(disasterNumber)) {
+                countedDisasterNumbers.add(disasterNumber);
+                
+                if (incidentTypeCounts[incidentType]) {
+                    incidentTypeCounts[incidentType]++;
+                } else {
+                    incidentTypeCounts[incidentType] = 1;
+                }
+            }
+        });
+    }
     return incidentTypeCounts;
 }
 
