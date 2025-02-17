@@ -60,7 +60,7 @@ async function fetchAllAPIData() {
     await fetchFEMADisasterDeclarationsSummariesSince1968()
 }
 
-function displayAllData(fipsCode){
+async function displayAllData(fipsCode){
     let fipsStateCode = fipsCode[0] + fipsCode[1]
     let fipsCountyCode = fipsCode[2] + fipsCode[3] + fipsCode[4]
     let view = false
@@ -72,6 +72,7 @@ function displayAllData(fipsCode){
         createBarChartForMonthlyAverageByState(fipsStateCode)
         loadStateMap(fipsStateCode)
         populateDataRows(fipsStateCode,fipsCountyCode)
+        console.log(await getCountyByFips(fipsStateCode, fipsCountyCode))
     } else {
         // If view is in county
     }
@@ -84,6 +85,18 @@ const fipsToAbbreviation = {
     "45": "SC", "47": "TN", "48": "TX", "49": "UT", "51": "VA"
 };
 
+export async function getCountyNameByFips(stateFips, countyFips) {
+    const geojsonUrl = "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json";
+    let name = 'Unkown'
+    const geoData = await d3.json(geojsonUrl);
+
+    Object.values(geoData.features).forEach(obj => {
+        if (obj.properties.STATE === stateFips && obj.properties.COUNTY === countyFips && obj.properties.NAME != undefined) {
+            name = obj.properties.NAME
+        }
+    });
+    return name
+}
 
 export function getStateAbbreviationByFips(fipsCode) {
     const abbreviation = fipsToAbbreviation[fipsCode];

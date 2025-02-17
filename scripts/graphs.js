@@ -4,6 +4,7 @@ import { disastersByFipsTypes } from "./script.js";
 import { getAverageDisastersPerMonth } from "./script.js"
 import { getAverageDisastersPerYearByCounty } from "./script.js"
 import { disastersByCountyFipsSince1968 } from "./script.js"
+import { getCountyNameByFips } from "./script.js"
 
 export async function createDisastersStackedAreaChart(fipsStateCode, fipsCountyCode) {
     // Fetch state and county disaster data
@@ -86,7 +87,7 @@ export async function createDisastersStackedAreaChart(fipsStateCode, fipsCountyC
         .attr("text-anchor", "middle")
         .style("font-size", "18px")
         .style("font-weight", "bold")
-        .text(`Natural Disasters in ${getStateName(fipsStateCode)} Since 1968`);
+        .text(`Natural Disasters in ${await getCountyNameByFips(fipsStateCode, fipsCountyCode)} County, ${getStateName(fipsStateCode)} Since 1968`);
 
     // Tooltip
     const tooltip = d3.select("#svg-container1")
@@ -160,7 +161,7 @@ export async function createDisastersStackedAreaChart(fipsStateCode, fipsCountyC
     });
 
     // Crosshair Interaction
-    svg.on("mousemove", function (event) {
+    svg.on("mousemove", async function (event) {
         const [mouseX] = d3.pointer(event);
         const closestYear = Math.round(x.invert(mouseX));
         const yearData = mergedData.find(d => d.year === closestYear);
@@ -172,13 +173,13 @@ export async function createDisastersStackedAreaChart(fipsStateCode, fipsCountyC
                 .attr("y2", height - marginBottom)
                 .attr("visibility", "visible");
 
-            const countyName = getCountyName(fipsStateCode, fipsCountyCode);
+            const countyName = await getCountyNameByFips(fipsStateCode, fipsCountyCode);
             const stateName = getStateName(fipsStateCode);
 
             tooltip.style("display", "block")
                 .html(`<strong>Year:</strong> ${closestYear}<br>
                        <strong>${stateName} Disasters:</strong> ${yearData.state}<br>
-                       <strong>${countyName} Disasters:</strong> ${yearData.county}`)
+                       <strong>${countyName} County Disasters:</strong> ${yearData.county}`)
                 .style("left", `${event.pageX + 10}px`)
                 .style("top", `${event.pageY - 20}px`);
         }
