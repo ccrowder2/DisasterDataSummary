@@ -630,20 +630,6 @@ export async function loadStateMap(fipsCode) {
             .on("mouseout", function () {
                 tooltip.style("display", "none"); // Hide tooltip
             });
-
-        // Dynamically position the title with more space above the map
-        const stateAbbreviation = getStateAbbreviationByFips(fipsCode);
-        const titlePadding = 20;  // Add more space above the title
-        const titleYPosition = titlePadding;  // Adjust title position
-
-        svg.append("text")
-            .attr("x", width / 2)
-            .attr("y", titleYPosition)
-            .attr("text-anchor", "middle")
-            .style("font-size", "20px")  // Adjust font size for the title
-            .style("font-weight", "bold")
-            .text(`Average Natural Disasters By County in ${stateAbbreviation}`);
-
     } catch (error) {
         console.error("Error loading GeoJSON:", error);
     }

@@ -6,6 +6,8 @@ import { createBarChartForMonthlyAverageByStateAndCounty } from './graphs.js';
 import { loadStateMap } from './graphs.js';
 import { createPieChartForCountyTypes } from "./graphs.js"
 window.handleOnLoad = async function handleOnLoad() {
+    let insertFullFipCode = '12001';
+    let stateCode = insertFullFipCode[0] + insertFullFipCode[1]
     let html = `
      <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +43,7 @@ window.handleOnLoad = async function handleOnLoad() {
             <div id="svg-container4" class="chart-box">
             </div>
             <div id="svg-container5" class="chart-box">
+                <h3 id="stateTitle">Average Annual Disasters by County in ${getStateAbbreviationByFips(stateCode)}</h3>
                 <svg id="state-map"></svg>
             </div>
         </div>
@@ -53,7 +56,7 @@ window.handleOnLoad = async function handleOnLoad() {
 
     document.getElementById('main').innerHTML = html;
     await fetchAllAPIData()
-    displayAllData('12057')
+    displayAllData(insertFullFipCode)
 }
 
 async function fetchAllAPIData() {
