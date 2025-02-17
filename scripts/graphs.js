@@ -382,7 +382,7 @@ export function createBarChartForMonthlyAverageByState(fipsStateCode) {
         .attr("text-anchor", "middle")
         .style("font-size", "18px")
         .style("font-weight", "bold")
-        .text(`Avg Monthly Disasters in ${getStateAbbreviationByFips(fipsStateCode)}`);
+        .text(`Average Natural Disasters By Month in ${getStateAbbreviationByFips(fipsStateCode)} Since 1968`);
 
     // Tooltip setup
     const tooltip = d3.select("#svg-container4")
@@ -396,8 +396,9 @@ export function createBarChartForMonthlyAverageByState(fipsStateCode) {
     // Add hover effects for tooltips
     svg.selectAll("rect")
         .on("mouseover", function (event, d) {
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             tooltip.style("display", "block")
-                .html(`<strong>Month:</strong> ${d.month}<br><strong>Avg Disasters:</strong> ${d.average}`)
+                .html(`<strong>Month:</strong> ${monthNames[parseInt(d.month) - 1]}<br><strong>Avg Disasters:</strong> ${d.average}`)
                 .style("left", `${event.pageX + 10}px`)
                 .style("top", `${event.pageY - 20}px`);
             d3.select(this).attr("fill", "#0056b3"); // Darken bar on hover

@@ -53,7 +53,7 @@ window.handleOnLoad = async function handleOnLoad() {
 
     document.getElementById('main').innerHTML = html;
     await fetchAllAPIData()
-    displayAllData('12001')
+    displayAllData('12057')
 }
 
 async function fetchAllAPIData() {
@@ -173,6 +173,7 @@ export function disastersByCountyFipsSince1968(fipsStateCode, fipsCountyCode) {
     return disastersByYear;
 }
 
+// Pie Chart Data
 export function disastersByFipsTypes(fipsStateCode) {
     const disasters = disastersByFips[fipsStateCode];
     const incidentTypeCounts = {};
@@ -207,7 +208,7 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
         <tr>
             <th scope="col">Disaster Type</th>
             <th scope="col">Area Affected</th>
-            <th scope="col">Year</th>
+            <th scope="col">Date</th>
         </tr>
     </thead>
     <tbody>
@@ -227,7 +228,7 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
         <tr>
             <td>${disaster.incidentType}</td>
             <td>${disaster.designatedArea}</td>
-            <td>${disaster.year}</td>
+            <td>${disaster.declarationDate}</td>
         </tr>
         `
         })
@@ -241,34 +242,45 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
 document.getElementById('rowData').innerHTML = html
 }
 
+// Bar chart Data
 export function getAverageDisastersPerMonth(fipsStateCode) {
     const disasters = disastersByFips[fipsStateCode];
     if (!disasters) return {};
 
     const monthTotals = {};
     const yearCounts = {};
+    const disasterNumbersByMonth = {}; // To track disaster numbers per month
 
-    Object.values(disasters).forEach(({ declarationDate }) => {
-        if (declarationDate) {
+    Object.values(disasters).forEach(({ disasterNumber, declarationDate }) => {
+        if (declarationDate && disasterNumber) {
             const date = new Date(declarationDate);
             const year = date.getFullYear();
             const month = (date.getMonth() + 1).toString().padStart(2, '0');
 
+            // Initialize the month totals, year counts, and disaster number set if not already done
             if (!monthTotals[month]) {
                 monthTotals[month] = 0;
                 yearCounts[month] = new Set();
+                disasterNumbersByMonth[month] = new Set(); // Add a Set to track disasterNumbers for this month
             }
 
-            monthTotals[month]++;
+            // Only count the disaster if its number has not been encountered for this month
+            if (!disasterNumbersByMonth[month].has(disasterNumber)) {
+                monthTotals[month]++; // Increment the disaster count for the month
+                disasterNumbersByMonth[month].add(disasterNumber); // Mark this disasterNumber as counted
+            }
+
+            // Track the year for the month (to avoid counting the same year multiple times)
             yearCounts[month].add(year);
         }
     });
 
+    // Calculate the average disasters per month
     const monthlyAverages = {};
     Object.keys(monthTotals).forEach(month => {
         const totalDisasters = monthTotals[month];
-        const yearCount = yearCounts[month].size;
-        monthlyAverages[month] = parseFloat((totalDisasters / yearCount).toFixed(2));
+        const yearCount = yearCounts[month].size; // Get the number of unique years for that month
+        monthlyAverages[month] = parseFloat((totalDisasters / yearCount).toFixed(2)); // Calculate the average
     });
 
     return monthlyAverages;
