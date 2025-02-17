@@ -1,5 +1,5 @@
 import { fetchFEMADisasterDeclarationsSummariesSince1968 } from './apis.js';
-import { createDisastersLineChart } from './graphs.js';
+import { createDisastersStackedAreaChart } from './graphs.js';
 import { disastersByFips } from './apis.js';
 import { createPieChartForTypes } from './graphs.js';
 import { createBarChartForMonthlyAverageByState } from './graphs.js';
@@ -67,11 +67,10 @@ function displayAllData(fipsCode){
 
     // State view = false; County View = true;
     if(view == false){
-        createDisastersLineChart(fipsStateCode)
+        createDisastersStackedAreaChart(fipsStateCode, fipsCountyCode)
         createPieChartForTypes(fipsStateCode)
         createBarChartForMonthlyAverageByState(fipsStateCode)
         loadStateMap(fipsStateCode)
-        console.log(getAverageDisastersPerYearByCounty(fipsStateCode))
         populateDataRows(fipsStateCode,fipsCountyCode)
     } else {
         // If view is in county
@@ -93,6 +92,8 @@ export function getStateAbbreviationByFips(fipsCode) {
     }
 }
 
+// Line Chart Data
+// State data
 export function disastersByFipsSince1968(fipsStateCode) {
     const disastersByYear = {};
     const disasters = disastersByFips[fipsStateCode];
@@ -120,6 +121,44 @@ export function disastersByFipsSince1968(fipsStateCode) {
     return disastersByYear;
 }
 
+// County Data
+export function disastersByCountyFipsSince1968(fipsStateCode, fipsCountyCode) {
+    const disastersByYear = {};
+
+    // Access the disasters for the specific state FIPS code
+    const disasters = disastersByFips[fipsStateCode];
+
+    if (disasters) {
+        const countedDisasterNumbers = new Set();
+
+        // Loop through all disaster records in the state
+        Object.values(disasters).forEach(obj => {
+            const year = obj.year;
+            const disasterNumber = obj.disasterNumber;
+            const countyCode = obj.fips_county_code;
+
+            // Check if the county code matches the input county FIPS code
+            if (countyCode === fipsCountyCode) {
+                // Only count unique disaster numbers for the given county and year
+                if (!countedDisasterNumbers.has(disasterNumber)) {
+                    countedDisasterNumbers.add(disasterNumber);
+
+                    // Initialize the year in disastersByYear if it doesn't already exist
+                    if (!disastersByYear[year]) {
+                        disastersByYear[year] = 0;
+                    }
+
+                    // Increment the count for this year
+                    disastersByYear[year] += 1;
+                }
+            }
+        });
+    } else {
+        console.log(`No disasters found for FIPS state code: ${fipsStateCode}`);
+    }
+
+    return disastersByYear;
+}
 
 export function disastersByFipsTypes(fipsStateCode) {
     const disasters = disastersByFips[fipsStateCode];

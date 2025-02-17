@@ -3,131 +3,191 @@ import { getStateAbbreviationByFips } from './script.js';
 import { disastersByFipsTypes } from "./script.js";
 import { getAverageDisastersPerMonth } from "./script.js"
 import { getAverageDisastersPerYearByCounty } from "./script.js"
+import { disastersByCountyFipsSince1968 } from "./script.js"
 
-export async function createDisastersLineChart(fipsStateCode) {
-    const disastersByYear = disastersByFipsSince1968(fipsStateCode);
+export async function createDisastersStackedAreaChart(fipsStateCode, fipsCountyCode) {
+    // Fetch state and county disaster data
+    const disastersByStateYear = disastersByFipsSince1968(fipsStateCode);
+    const disastersByCountyYear = disastersByCountyFipsSince1968(fipsStateCode, fipsCountyCode);
 
-    const data = Object.keys(disastersByYear).map(year => ({
-        year: parseInt(year),
-        count: disastersByYear[year]
+    // Get all years and ensure missing years are included
+    const allYears = new Set([...Object.keys(disastersByStateYear), ...Object.keys(disastersByCountyYear)].map(Number));
+
+    const stateData = Array.from(allYears).map(year => ({
+        year,
+        count: disastersByStateYear[year] || 0
     }));
 
-    data.sort((a, b) => a.year - b.year);
+    const countyData = Array.from(allYears).map(year => ({
+        year,
+        count: disastersByCountyYear[year] || 0
+    }));
 
-    // Remove any existing elements in the container
+    stateData.sort((a, b) => a.year - b.year);
+    countyData.sort((a, b) => a.year - b.year);
+
+    // Merge state and county data
+    const mergedData = stateData.map((state, index) => ({
+        year: state.year,
+        state: state.count,
+        county: countyData[index] ? countyData[index].count : 0
+    }));
+
+    // Remove previous chart
     d3.select("#svg-container1").selectAll("*").remove();
 
-    // Get the width and height of the container dynamically
+    // Fetch GeoJSON for county names
+    const geojsonUrl = `https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json`;
+    const geoData = await d3.json(geojsonUrl);
+
+    // Function to get county name
+    function getCountyName(fipsStateCode, fipsCountyCode) {
+        const fullFips = `${fipsStateCode}${fipsCountyCode.padStart(3, "0")}`;
+        const countyFeature = geoData.features.find(feature => feature.properties.FIPS === fullFips);
+        return countyFeature ? countyFeature.properties.NAME : "Unknown County";
+    }
+
+    // Get state abbreviation
+    function getStateName(fipsStateCode) {
+        return getStateAbbreviationByFips(fipsStateCode);
+    }
+
+    // Get container size dynamically
     const container = document.getElementById("svg-container1");
     const width = container.clientWidth;
     const height = container.clientHeight;
 
-    const marginTop = 100;
+    const marginTop = 50;
     const marginRight = 100;
     const marginBottom = 50;
-    const marginLeft = 60;
+    const marginLeft = 70;
 
-    // x scale
+    // Define scales
     const x = d3.scaleLinear()
-        .domain([d3.min(data, d => d.year), d3.max(data, d => d.year)])
+        .domain(d3.extent(mergedData, d => d.year))
         .range([marginLeft, width - marginRight]);
 
-    // y scale
     const y = d3.scaleLinear()
-        .domain([0, d3.max(data, d => d.count)])
+        .domain([0, d3.max(mergedData, d => d.state + d.county)])
         .range([height - marginBottom, marginTop]);
 
-    // svg container
+    // Create SVG container
     const svg = d3.select("#svg-container1")
         .append("svg")
         .attr("width", "100%")
         .attr("height", "100%")
-        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("viewBox", `0 0 ${width} ${height + 40}`) // Extra space for title
         .attr("style", `max-width: 100%; height: auto; background-color: none;`);
 
-    // Create axes
-    svg.append("g")
-        .attr("transform", `translate(0,${height - marginBottom})`)
-        .call(d3.axisBottom(x).ticks(10).tickFormat(d3.format("d")))
-        .selectAll(".tick text")
-        .style("text-anchor", "middle")
-        .style("font-size", "12px");
-
-    svg.append("g")
-        .attr("transform", `translate(${marginLeft},0)`)
-        .call(d3.axisLeft(y).ticks(10))
-        .call(g => g.select(".domain").remove())
-        .selectAll(".tick text")
-        .style("font-size", "12px");
-
-    // Define the line
-    const line = d3.line()
-        .x(d => x(d.year))
-        .y(d => y(d.count));
-
-    // Define the area generator
-    const area = d3.area()
-        .x(d => x(d.year))
-        .y0(height - marginBottom)  // Bottom of the SVG area
-        .y1(d => y(d.count)); // The y-value of the line
-
-    // Add area fill (color under the line)
-    svg.append("path")
-        .datum(data)
-        .attr("fill", "rgba(70, 130, 180, 0.5)")
-        .attr("d", area);
-
-    // Line transition animation
-    svg.append("path")
-        .datum(data)
-        .attr("fill", "none")
-        .attr("stroke", "steelblue")
-        .attr("stroke-width", 2)
-        .attr("d", line)
-        .attr("stroke-dasharray", function () { return this.getTotalLength(); })
-        .attr("stroke-dashoffset", function () { return this.getTotalLength(); })
-        .transition()
-        .duration(2000)
-        .attr("stroke-dashoffset", 0);
-
-    // Tooltip setup
-    const tooltip = d3.select("#svg-container1")
-        .append("div")
-        .style("position", "absolute")
-        .style("background", "lightgray")
-        .style("padding", "5px")
-        .style("border-radius", "5px")
-        .style("display", "none");
-
-    // Add circles (data points) with hover effects
-    svg.selectAll("circle")
-        .data(data)
-        .enter()
-        .append("circle")
-        .attr("cx", d => x(d.year))
-        .attr("cy", d => y(d.count))
-        .attr("r", 5)
-        .attr("fill", "red")
-        .attr("opacity", 0)
-        .on("mouseover", (event, d) => {
-            tooltip.style("display", "block")
-                .html(`Year: ${d.year} <br> Disasters: ${d.count}`)
-                .style("left", `${event.pageX + 10}px`)
-                .style("top", `${event.pageY - 20}px`);
-            d3.select(event.target).attr("opacity", 1).attr("r", 8).attr("fill", "orange");
-        })
-        .on("mouseout", (event) => {
-            tooltip.style("display", "none");
-            d3.select(event.target).attr("opacity", 0).attr("r", 5).attr("fill", "red");
-        });
-
-    // Add graph title
+    // Add Title Above the Chart
     svg.append("text")
         .attr("x", width / 2)
         .attr("y", marginTop / 2)
         .attr("text-anchor", "middle")
         .style("font-size", "18px")
-        .text(`Natural Disasters in ${getStateAbbreviationByFips(fipsStateCode)} Since 1968`);
+        .style("font-weight", "bold")
+        .text(`Natural Disasters in ${getStateName(fipsStateCode)} Since 1968`);
+
+    // Tooltip
+    const tooltip = d3.select("#svg-container1")
+        .append("div")
+        .attr("id", "tooltip")
+        .style("position", "absolute")
+        .style("background", "white")
+        .style("border", "1px solid black")
+        .style("padding", "5px")
+        .style("border-radius", "5px")
+        .style("font-size", "12px")
+        .style("display", "none");
+
+    // Crosshair
+    const crosshair = svg.append("line")
+        .attr("stroke", "black")
+        .attr("stroke-dasharray", "4")
+        .attr("visibility", "hidden");
+
+    // Axes
+    svg.append("g")
+        .attr("transform", `translate(0,${height - marginBottom})`)
+        .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+
+    svg.append("g")
+        .attr("transform", `translate(${marginLeft},0)`)
+        .call(d3.axisLeft(y));
+
+    // Stack data
+    const stack = d3.stack().keys(["county", "state"]);
+    const stackedData = stack(mergedData);
+
+    // Define area generator
+    const area = d3.area()
+        .x(d => x(d.data.year))
+        .y0(d => y(d[0]))
+        .y1(d => y(d[1]));
+
+    // Add stacked areas
+    svg.selectAll(".area")
+        .data(stackedData)
+        .enter()
+        .append("path")
+        .attr("class", "area")
+        .attr("fill", (d, i) => i === 0 ? "#98C9E8" : "#2E8B57")
+        .attr("pointer-events", "all")
+        .attr("d", area);
+
+    // Add Legend
+    const legend = svg.append("g")
+        .attr("transform", `translate(${width - 120}, 20)`);
+
+    const legendData = [
+        { name: "State", color: "#2E8B57" },
+        { name: "County", color: "#98C9E8" }
+    ];
+
+    legendData.forEach((d, i) => {
+        legend.append("rect")
+            .attr("x", 0)
+            .attr("y", i * 20)
+            .attr("width", 15)
+            .attr("height", 15)
+            .attr("fill", d.color);
+
+        legend.append("text")
+            .attr("x", 20)
+            .attr("y", i * 20 + 12)
+            .text(d.name)
+            .style("font-size", "12px");
+    });
+
+    // Crosshair Interaction
+    svg.on("mousemove", function (event) {
+        const [mouseX] = d3.pointer(event);
+        const closestYear = Math.round(x.invert(mouseX));
+        const yearData = mergedData.find(d => d.year === closestYear);
+
+        if (yearData) {
+            crosshair.attr("x1", x(closestYear))
+                .attr("x2", x(closestYear))
+                .attr("y1", marginTop)
+                .attr("y2", height - marginBottom)
+                .attr("visibility", "visible");
+
+            const countyName = getCountyName(fipsStateCode, fipsCountyCode);
+            const stateName = getStateName(fipsStateCode);
+
+            tooltip.style("display", "block")
+                .html(`<strong>Year:</strong> ${closestYear}<br>
+                       <strong>${stateName} Disasters:</strong> ${yearData.state}<br>
+                       <strong>${countyName} Disasters:</strong> ${yearData.county}`)
+                .style("left", `${event.pageX + 10}px`)
+                .style("top", `${event.pageY - 20}px`);
+        }
+    });
+
+    svg.on("mouseout", function () {
+        crosshair.attr("visibility", "hidden");
+        tooltip.style("display", "none");
+    });
 }
 
 export function createPieChartForTypes(fipsStateCode) {
@@ -230,7 +290,7 @@ export function createPieChartForTypes(fipsStateCode) {
         .style("text-shadow", "1px 1px 3px rgba(0,0,0,0.5)") // Small shadow for visibility
         .text(d => {
             const percentage = (d.data.count / totalDisasters) * 100;
-            return percentage > 15 ? `${d.data.type}\n${percentage.toFixed(1)}%` : ""; // Show type + % if > 5%
+            return percentage > 15 ? `${d.data.type} - ${percentage.toFixed(1)}%` : ""; // Show type + % if > 5%
         });
 }
 
@@ -392,18 +452,14 @@ export async function loadStateMap(fipsCode) {
 
         // Get average disasters per year for each county (using full 5-digit FIPS code)
         const countyDisasterAverages = getAverageDisastersPerYearByCounty(fipsCode);
-        console.log("County Disaster Averages:", countyDisasterAverages);  // Debug log for disaster averages
 
         // Get the minimum and maximum values for the disaster averages
         const minDisasters = d3.min(Object.values(countyDisasterAverages));
         const maxDisasters = d3.max(Object.values(countyDisasterAverages));
-        console.log("Disaster Min and Max:", minDisasters, maxDisasters);  // Debug log for min and max
 
         // Create a logarithmic color scale (this helps make small differences in the data more noticeable)
         const colorScale = d3.scaleSequential(d3.interpolateReds)
             .domain([Math.log(minDisasters + 1), Math.log(maxDisasters + 1)]); // Log scale for enhanced contrast
-
-        console.log("Color Scale Domain:", colorScale.domain());  // Debug log for color scale domain
 
         // Create a projection that fits the state inside the SVG
         const projection = d3.geoMercator().fitSize([width, height], stateCounties);
@@ -418,9 +474,6 @@ export async function loadStateMap(fipsCode) {
                 // Combine state and county FIPS code into a 5-digit code
                 const countyFips = d.properties.STATE + d.properties.COUNTY;  // Full 5-digit FIPS code
                 const avgDisasters = countyDisasterAverages[countyFips];
-
-                // Log the value of the average disasters for debugging
-                console.log(`County: ${d.properties.NAME}, FIPS: ${countyFips}, Avg Disasters: ${avgDisasters}`);
 
                 // Color the counties based on the average disasters per year using the logarithmic scale
                 return avgDisasters ? colorScale(Math.log(avgDisasters + 1)) : "#cccccc"; // Default gray if no data
