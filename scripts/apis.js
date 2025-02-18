@@ -1,5 +1,5 @@
 export let disastersByFips = {};
-const hcaStateFips = ["01", "02", "06", "08", "12", "13", "16", "18", "20", "21", "22", "29", "28", "37", "32", "33", "45", "47", "48", "49", "51"];
+
 
 function cleanFEMADisasterData(disaster) {
     let newObject = {
@@ -41,18 +41,16 @@ export async function fetchFEMADisasterDeclarationsSummariesSince1968() {
         if (data.DisasterDeclarationsSummaries && data.DisasterDeclarationsSummaries.length > 0) {
             data.DisasterDeclarationsSummaries.forEach(disaster => {
                 const fipsCode = disaster.fipsStateCode;
+                const newObject = cleanFEMADisasterData(disaster);
 
-                if (hcaStateFips.includes(fipsCode)) {
-                    const newObject = cleanFEMADisasterData(disaster);
-
-                    if (!disastersByFips[fipsCode]) {
-                        disastersByFips[fipsCode] = {};
-                    }
-
-                    if (!disastersByFips[fipsCode][newObject.id]) {
-                        disastersByFips[fipsCode][newObject.id] = newObject;
-                    }
+                if (!disastersByFips[fipsCode]) {
+                    disastersByFips[fipsCode] = {};
                 }
+
+                if (!disastersByFips[fipsCode][newObject.id]) {
+                    disastersByFips[fipsCode][newObject.id] = newObject;
+                }
+                
             });
 
             skip += batchSize;
