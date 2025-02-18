@@ -231,11 +231,15 @@ export function disasterTypesByFipsCounty(fipsStateCode, fipsCountyCode) {
 }
 
 function populateDataRows(fipsStateCode, fipsCountyCode) {
-    const disastersInCounty = []
-    const disasters = disastersByFips[fipsStateCode] == undefined ? 'Unknown' : Object.values(disastersByFips[fipsStateCode]);
+    const disastersInCounty = [];
+    const stateDisasters = disastersByFips[fipsStateCode] == undefined ? 'Unknown' : Object.values(disastersByFips[fipsStateCode]);
+    const displayedDisasterNumbers = new Set(); // To keep track of displayed disaster numbers
     let html = `
     <table class="table table-striped">
     <thead>
+        <tr>
+            <th scope="col" colspan="3" class="text-center">County Data</th>
+        </tr>
         <tr>
             <th scope="col">Disaster Type</th>
             <th scope="col">Area Affected</th>
@@ -243,17 +247,20 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
         </tr>
     </thead>
     <tbody>
-    `
+    `;
 
-    disasters.sort((a, b) => b.year - a.year);
-    
-    disasters.forEach(disaster => {
+    // Sort state disasters by date
+    stateDisasters.sort((a, b) => new Date(b.declarationDate) - new Date(a.declarationDate));
+
+    // Display county-specific disasters
+    stateDisasters.forEach(disaster => {
         if (disaster.fips_county_code == fipsCountyCode) {
-            disastersInCounty.push(disaster)
+            disastersInCounty.push(disaster);
         }
-    })
+    });
 
-    if (disastersInCounty.length > 0){
+    // Display disasters for the selected county
+    if (disastersInCounty.length > 0) {
         disastersInCounty.forEach(disaster => {
             html += `
         <tr>
@@ -261,16 +268,50 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
             <td>${disaster.designatedArea}</td>
             <td>${disaster.declarationDate}</td>
         </tr>
-        `
-        })
-
-        html += `
-        </tbody>
-        `
+        `;
+            displayedDisasterNumbers.add(disaster.disasterNumber); // Track the disaster number
+        });
     } else {
-        html = `No data on disasters`
+        html += `
+        <tr><td colspan="3" class="text-center">No data on disasters in this county</td></tr>
+        `;
     }
-document.getElementById('rowData').innerHTML = html
+
+    // Add the separator row for state data
+    html += `
+        <thead>
+        <tr>
+            <th scope="col" colspan="3" class="text-center">State Data</th>
+        </tr>
+        <tr>
+            <th scope="col">Disaster Type</th>
+            <th scope="col">Area Affected</th>
+            <th scope="col">Date</th>
+        </tr>
+        </thead>
+    `;
+
+    // Display state-level disasters in date order, ensuring no repeated disaster numbers
+    stateDisasters.forEach(disaster => {
+        if (!displayedDisasterNumbers.has(disaster.disasterNumber)) {
+            html += `
+        <tr>
+            <td>${disaster.incidentType}</td>
+            <td>${disaster.designatedArea}</td>
+            <td>${disaster.declarationDate}</td>
+        </tr>
+        `;
+            displayedDisasterNumbers.add(disaster.disasterNumber); // Track the disaster number
+        }
+    });
+
+    html += `
+    </tbody>
+    </table>
+    `;
+
+    // Update the DOM with the new table content
+    document.getElementById('rowData').innerHTML = html;
 }
 
 // Bar chart Data
