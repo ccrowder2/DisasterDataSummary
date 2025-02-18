@@ -1,6 +1,5 @@
 export let disastersByFips = {};
 
-
 function cleanFEMADisasterData(disaster) {
     let newObject = {
         id: disaster.id || 'N/A',

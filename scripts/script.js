@@ -6,7 +6,7 @@ import { createBarChartForMonthlyAverageByStateAndCounty } from './graphs.js';
 import { loadStateMap } from './graphs.js';
 import { createPieChartForCountyTypes } from "./graphs.js"
 window.handleOnLoad = async function handleOnLoad() {
-    let insertFullFipCode = '23017';
+    let insertFullFipCode = '12097';
     let stateCode = insertFullFipCode[0] + insertFullFipCode[1]
     let html = `
      <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
@@ -232,8 +232,10 @@ export function disasterTypesByFipsCounty(fipsStateCode, fipsCountyCode) {
 
 function populateDataRows(fipsStateCode, fipsCountyCode) {
     const disastersInCounty = [];
-    const stateDisasters = disastersByFips[fipsStateCode] == undefined ? 'Unknown' : Object.values(disastersByFips[fipsStateCode]);
-    const displayedDisasterNumbers = new Set(); // To keep track of displayed disaster numbers
+    const stateDisasters = disastersByFips[fipsStateCode]
+        ? disastersByFips[fipsStateCode] 
+        : [];
+    const displayedDisasterNumbers = new Set(); // To track displayed disaster numbers
     let html = `
     <table class="table table-striped">
     <thead>
@@ -250,22 +252,25 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
     <tbody>
     `;
 
-    let modals = ``; // To store all modals
+    let modals = ``; // Store modals
 
-    // Sort state disasters by date
-    stateDisasters.sort((a, b) => new Date(b.declarationDate) - new Date(a.declarationDate));
+    // Sort disasters by date
+    Object.values(stateDisasters).sort((a, b) => new Date(b.declarationDate) - new Date(a.declarationDate));
 
-    // Display county-specific disasters
-    stateDisasters.forEach(disaster => {
-        if (disaster.fips_county_code == fipsCountyCode) {
+    // Filter unique county-specific disasters
+    Object.values(stateDisasters).forEach(disaster => {
+        if (String(disaster.fips_county_code) === String(fipsCountyCode) && 
+            !displayedDisasterNumbers.has(disaster.disasterNumber)) {
             disastersInCounty.push(disaster);
+            displayedDisasterNumbers.add(disaster.disasterNumber); // Mark as displayed
         }
     });
+    console.log(disastersInCounty)
 
-    // Display disasters for the selected county
+    // Display county-specific disasters
     if (disastersInCounty.length > 0) {
         disastersInCounty.forEach(disaster => {
-            const modalId = `modal-${disaster.id}`; // Unique modal ID
+            const modalId = `modal-${disaster.id}`;
             html += `
         <tr data-bs-toggle="modal" data-bs-target="#${modalId}" class="clickable-row">
             <td>${disaster.incidentType}</td>
@@ -274,11 +279,12 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
             <td>${disaster.declarationDate}</td>
         </tr>
         `;
-            displayedDisasterNumbers.add(disaster.disasterNumber); // Track the disaster number
-            let allCountiesAffected = getAllCountiesAffected(fipsStateCode, disaster.disasterNumber)
-            let disasterBegandEnd = disaster.incidentEndDate != 'Not Listed' ? `Disaster began on ${disaster.declarationDate} and ended on ${disaster.incidentEndDate}.` : `Disaster began on ${disaster.incidentDeclarationDate}, the end date is not listed.`
+            let allCountiesAffected = getAllCountiesAffected(fipsStateCode, disaster.disasterNumber);
+            let disasterBegandEnd = disaster.incidentEndDate !== 'Not Listed' 
+                ? `Disaster began on ${disaster.declarationDate} and ended on ${disaster.incidentEndDate}.` 
+                : `Disaster began on ${disaster.incidentDeclarationDate}, the end date is not listed.`;
 
-            // Add the modal for this disaster
+            // Modal
             modals += `
             <div class="modal fade" id="${modalId}" tabindex="-1" aria-labelledby="${modalId}-label" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
@@ -306,7 +312,7 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
         `;
     }
 
-    // Add the separator row for state data
+    // Add separator row for state-level data
     html += `
         <thead>
         <tr>
@@ -321,10 +327,10 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
         </thead>
     `;
 
-    // Display state-level disasters in date order, ensuring no repeated disaster numbers
-    stateDisasters.forEach(disaster => {
+    // Display state-level disasters ensuring no duplicate disaster numbers
+    Object.values(stateDisasters).forEach(disaster => {
         if (!displayedDisasterNumbers.has(disaster.disasterNumber)) {
-            const modalId = `modal-${disaster.id}`; // Unique modal ID
+            const modalId = `modal-${disaster.id}`;
             html += `
         <tr data-bs-toggle="modal" data-bs-target="#${modalId}" class="clickable-row">
             <td>${disaster.incidentType}</td>
@@ -333,10 +339,13 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
             <td>${disaster.declarationDate}</td>
         </tr>
         `;
-            displayedDisasterNumbers.add(disaster.disasterNumber); // Track the disaster number
-            let allCountiesAffected = getAllCountiesAffected(fipsStateCode, disaster.disasterNumber)
-            let disasterBegandEnd = disaster.incidentEndDate != 'Not Listed' ? `Disaster began on ${disaster.declarationDate} and ended on ${disaster.incidentEndDate}.` : `Disaster began on ${disaster.incidentDeclarationDate}, the end date is not listed.`
-            // Add the modal for this disaster
+            displayedDisasterNumbers.add(disaster.disasterNumber); // Mark as displayed
+            let allCountiesAffected = getAllCountiesAffected(fipsStateCode, disaster.disasterNumber);
+            let disasterBegandEnd = disaster.incidentEndDate !== 'Not Listed' 
+                ? `Disaster began on ${disaster.declarationDate} and ended on ${disaster.incidentEndDate}.` 
+                : `Disaster began on ${disaster.incidentDeclarationDate}, the end date is not listed.`;
+
+            // Modal
             modals += `
             <div class="modal fade" id="${modalId}" tabindex="-1" aria-labelledby="${modalId}-label" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
