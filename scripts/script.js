@@ -6,7 +6,7 @@ import { createBarChartForMonthlyAverageByStateAndCounty } from './graphs.js';
 import { loadStateMap } from './graphs.js';
 import { createPieChartForCountyTypes } from "./graphs.js"
 window.handleOnLoad = async function handleOnLoad() {
-    let insertFullFipCode = '12101';
+    let insertFullFipCode = '51145';
     let stateCode = insertFullFipCode[0] + insertFullFipCode[1]
     let html = `
      <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
@@ -66,21 +66,13 @@ async function fetchAllAPIData() {
 async function displayAllData(fipsCode){
     let fipsStateCode = fipsCode[0] + fipsCode[1]
     let fipsCountyCode = fipsCode[2] + fipsCode[3] + fipsCode[4]
-    let view = false
-
-    // State view = false; County View = true;
-    if(view == false){
-        createDisastersStackedAreaChart(fipsStateCode, fipsCountyCode)
-        createPieChartForStateTypes(fipsStateCode)
-        createPieChartForCountyTypes(fipsStateCode, fipsCountyCode)
-        createBarChartForMonthlyAverageByStateAndCounty(fipsStateCode,fipsCountyCode)
-        loadStateMap(fipsStateCode)
-        populateDataRows(fipsStateCode,fipsCountyCode)
-        console.log(getAllCountiesAffected(fipsStateCode, '4834'))
-
-    } else {
-        // If view is in county
-    }
+  
+    createDisastersStackedAreaChart(fipsStateCode, fipsCountyCode)
+    createPieChartForStateTypes(fipsStateCode)
+    createPieChartForCountyTypes(fipsStateCode, fipsCountyCode)
+    createBarChartForMonthlyAverageByStateAndCounty(fipsStateCode,fipsCountyCode)
+    loadStateMap(fipsStateCode)
+    populateDataRows(fipsStateCode,fipsCountyCode)
 }
 
 const fipsToAbbreviation = {
