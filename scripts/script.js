@@ -6,7 +6,7 @@ import { createBarChartForMonthlyAverageByStateAndCounty } from './graphs.js';
 import { loadStateMap } from './graphs.js';
 import { createPieChartForCountyTypes } from "./graphs.js"
 window.handleOnLoad = async function handleOnLoad() {
-    let insertFullFipCode = '12001';
+    let insertFullFipCode = '12101';
     let stateCode = insertFullFipCode[0] + insertFullFipCode[1]
     let html = `
      <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
@@ -238,11 +238,12 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
     <table class="table table-striped">
     <thead>
         <tr>
-            <th scope="col" colspan="3" class="text-center">County Data</th>
+            <th scope="col" colspan="4" class="text-center">County Data</th>
         </tr>
         <tr>
             <th scope="col">Disaster Type</th>
             <th scope="col">Area Affected</th>
+            <th scope="col">Declaration Title</th>
             <th scope="col">Date</th>
         </tr>
     </thead>
@@ -266,6 +267,7 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
         <tr>
             <td>${disaster.incidentType}</td>
             <td>${disaster.designatedArea}</td>
+            <td>${disaster.declarationTitle}</td>
             <td>${disaster.declarationDate}</td>
         </tr>
         `;
@@ -273,7 +275,7 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
         });
     } else {
         html += `
-        <tr><td colspan="3" class="text-center">No data on disasters in this county</td></tr>
+        <tr><td colspan="4" class="text-center">No data on disasters in this county</td></tr>
         `;
     }
 
@@ -281,11 +283,12 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
     html += `
         <thead>
         <tr>
-            <th scope="col" colspan="3" class="text-center">State Data</th>
+            <th scope="col" colspan="4" class="text-center">State Data</th>
         </tr>
         <tr>
             <th scope="col">Disaster Type</th>
             <th scope="col">Area Affected</th>
+            <th scope="col">Declaration Title</th>
             <th scope="col">Date</th>
         </tr>
         </thead>
@@ -298,6 +301,7 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
         <tr>
             <td>${disaster.incidentType}</td>
             <td>${disaster.designatedArea}</td>
+            <td>${disaster.declarationTitle}</td>
             <td>${disaster.declarationDate}</td>
         </tr>
         `;
