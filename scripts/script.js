@@ -73,10 +73,10 @@ async function displayAllData(fipsCode){
         createDisastersStackedAreaChart(fipsStateCode, fipsCountyCode)
         createPieChartForStateTypes(fipsStateCode)
         createPieChartForCountyTypes(fipsStateCode, fipsCountyCode)
-        console.log(disasterTypesByFipsCounty(fipsStateCode,fipsCountyCode))
         createBarChartForMonthlyAverageByStateAndCounty(fipsStateCode,fipsCountyCode)
         loadStateMap(fipsStateCode)
         populateDataRows(fipsStateCode,fipsCountyCode)
+        console.log(getAllCountiesAffected(fipsStateCode, '4834'))
 
     } else {
         // If view is in county
@@ -250,6 +250,8 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
     <tbody>
     `;
 
+    let modals = ``; // To store all modals
+
     // Sort state disasters by date
     stateDisasters.sort((a, b) => new Date(b.declarationDate) - new Date(a.declarationDate));
 
@@ -263,8 +265,9 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
     // Display disasters for the selected county
     if (disastersInCounty.length > 0) {
         disastersInCounty.forEach(disaster => {
+            const modalId = `modal-${disaster.id}`; // Unique modal ID
             html += `
-        <tr>
+        <tr data-bs-toggle="modal" data-bs-target="#${modalId}" class="clickable-row">
             <td>${disaster.incidentType}</td>
             <td>${disaster.designatedArea}</td>
             <td>${disaster.declarationTitle}</td>
@@ -272,6 +275,30 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
         </tr>
         `;
             displayedDisasterNumbers.add(disaster.disasterNumber); // Track the disaster number
+            let allCountiesAffected = getAllCountiesAffected(fipsStateCode, disaster.disasterNumber)
+            let disasterBegandEnd = disaster.incidentEndDate != 'Not Listed' ? `Disaster began on ${disaster.declarationDate} and ended on ${disaster.incidentEndDate}.` : `Disaster began on ${disaster.incidentDeclarationDate}, the end date is not listed.`
+
+            // Add the modal for this disaster
+            modals += `
+            <div class="modal fade" id="${modalId}" tabindex="-1" aria-labelledby="${modalId}-label" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="${modalId}-label">${disaster.declarationTitle}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p><strong>Disaster Type:</strong> ${disaster.incidentType}</p>
+                            <p><strong>Areas Affected in ${getStateAbbreviationByFips(fipsStateCode)}:</strong> ${allCountiesAffected}</p>
+                            <p>\n${disasterBegandEnd}</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `;
         });
     } else {
         html += `
@@ -297,8 +324,9 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
     // Display state-level disasters in date order, ensuring no repeated disaster numbers
     stateDisasters.forEach(disaster => {
         if (!displayedDisasterNumbers.has(disaster.disasterNumber)) {
+            const modalId = `modal-${disaster.id}`; // Unique modal ID
             html += `
-        <tr>
+        <tr data-bs-toggle="modal" data-bs-target="#${modalId}" class="clickable-row">
             <td>${disaster.incidentType}</td>
             <td>${disaster.designatedArea}</td>
             <td>${disaster.declarationTitle}</td>
@@ -306,6 +334,29 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
         </tr>
         `;
             displayedDisasterNumbers.add(disaster.disasterNumber); // Track the disaster number
+            let allCountiesAffected = getAllCountiesAffected(fipsStateCode, disaster.disasterNumber)
+            let disasterBegandEnd = disaster.incidentEndDate != 'Not Listed' ? `Disaster began on ${disaster.declarationDate} and ended on ${disaster.incidentEndDate}.` : `Disaster began on ${disaster.incidentDeclarationDate}, the end date is not listed.`
+            // Add the modal for this disaster
+            modals += `
+            <div class="modal fade" id="${modalId}" tabindex="-1" aria-labelledby="${modalId}-label" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="${modalId}-label">${disaster.declarationTitle}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p><strong>Disaster Type:</strong> ${disaster.incidentType}</p>
+                            <p><strong>Areas Affected in ${getStateAbbreviationByFips(fipsStateCode)}:</strong> ${allCountiesAffected}</p>
+                            <p>\n${disasterBegandEnd}</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `;
         }
     });
 
@@ -314,8 +365,8 @@ function populateDataRows(fipsStateCode, fipsCountyCode) {
     </table>
     `;
 
-    // Update the DOM with the new table content
-    document.getElementById('rowData').innerHTML = html;
+    // Append both table and modals
+    document.getElementById('rowData').innerHTML = html + modals;
 }
 
 // Bar chart Data
@@ -472,4 +523,22 @@ export function getAverageDisastersPerYearByCounty(fipsStateCode) {
     });
 
     return countyAverages;
+}
+
+function getAllCountiesAffected(stateFips, disasterNumber) {
+    const designatedAreas = new Set(); // To store unique designated areas
+
+    // Check if the state exists in the data
+    if (!disastersByFips[stateFips]) {
+        return []; // Return empty array if no disasters found for the state
+    }
+
+    // Loop through disasters in the given state
+    Object.values(disastersByFips[stateFips]).forEach(disaster => {
+        if (disaster.disasterNumber == disasterNumber) {
+            designatedAreas.add(` ${disaster.designatedArea}`); // Add only the designated area
+        }
+    });
+
+    return Array.from(designatedAreas); // Convert Set to an array and return
 }

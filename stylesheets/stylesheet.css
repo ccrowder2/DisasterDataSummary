@@ -212,3 +212,72 @@ table {
     height: 400px;
     margin-bottom: 25px;
 }
+
+/* Make modal background fade in smoothly */
+.modal.fade .modal-dialog {
+    transform: translateY(-10%);
+    transition: transform 0.3s ease-out;
+}
+
+.modal.show .modal-dialog {
+    transform: translateY(0);
+}
+
+/* Round modal corners and add shadow */
+.modal-content {
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Stylish modal header */
+.modal-header {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    padding: 15px;
+}
+
+/* Close button styling */
+.modal-header .btn-close {
+    filter: invert(1); /* Makes the close button visible on dark backgrounds */
+}
+
+/* Improve modal body spacing */
+.modal-body {
+    font-size: 16px;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+/* Customize modal footer */
+.modal-footer {
+    background-color: #f8f9fa;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+/* Smooth button transitions */
+.modal-footer .btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.modal-footer .btn:hover {
+    transform: scale(1.05);
+}
+
+/* Dark mode styling for modals */
+@media (prefers-color-scheme: dark) {
+    .modal-content {
+        background-color: #222;
+        color: white;
+    }
+
+    .modal-header {
+        background: linear-gradient(135deg, #444, #222);
+    }
+
+    .modal-footer {
+        background-color: #333;
+    }
+}

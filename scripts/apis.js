@@ -13,7 +13,8 @@ function cleanFEMADisasterData(disaster) {
         year: disaster.declarationDate ? new Date(disaster.declarationDate).getFullYear() : 'Unknown',
         designatedArea: disaster.designatedArea ? disaster.designatedArea.trim() : 'Unknown',
         disasterNumber: disaster.disasterNumber || 'N/A',
-        declarationDate: disaster.declarationDate ? formatDate(disaster.declarationDate) : 'Unknown',
+        declarationDate: disaster.incidentBeginDate ? formatDate(disaster.declarationDate) : 'Unknown',
+        incidentEndDate: disaster.incidentEndDate ? formatDate(disaster.incidentEndDate) : 'Not Listed',
         declarationTitle: disaster.declarationTitle ? disaster.declarationTitle.trim() : 'Unknown'
     };
     return newObject;
