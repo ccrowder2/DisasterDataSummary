@@ -209,7 +209,7 @@ export async function createPieChartForStateTypes(fipsStateCode) {
     const height = 425; // Match county chart size
     const radius = Math.min(width, height - 100) / 2;
 
-    const container = d3.select("#svg-container2");
+    const container = d3.select("#svg-container3");
     container.select("svg").remove();
     container.select("#tooltip").remove();
     container.select("#chart-title").remove();
@@ -220,7 +220,7 @@ export async function createPieChartForStateTypes(fipsStateCode) {
     .style("text-align", "center")
     .style("width", "100%")
     .style("padding", "5px 0") // Reduce padding to pull the chart up
-    .text(`Disaster Types in ${getStateAbbreviationByFips(fipsStateCode)}`);
+    .text(`Disaster Types in ${await getStateAbbreviationByFips(fipsStateCode)}`);
 
     const svg = container.append("svg")
         .attr("width", width)
@@ -263,7 +263,7 @@ export async function createPieChartForStateTypes(fipsStateCode) {
                 .style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY + 10) + "px");
 
-            d3.select(this).style("opacity", 0.7); // Dim the pie slice on hover
+            d3.select(this).style("opacity", 0.7);
         })
         .on("mousemove", function (event) {
             tooltip.style("left", (event.pageX + 10) + "px")
@@ -271,7 +271,7 @@ export async function createPieChartForStateTypes(fipsStateCode) {
         })
         .on("mouseout", function () {
             tooltip.style("opacity", 0);
-            d3.select(this).style("opacity", 1); // Restore original opacity after hover
+            d3.select(this).style("opacity", 1);
         });
 
     svg.selectAll("text")
@@ -286,9 +286,9 @@ export async function createPieChartForStateTypes(fipsStateCode) {
         .style("text-shadow", "1px 1px 3px rgba(0,0,0,0.5)")
         .text(d => {
             const percentage = (d.data.count / totalDisasters) * 100;
-            return percentage > 10 ? d.data.type : null; // Only show label if percentage > 10%
+            return percentage > 10 ? d.data.type : null;
         });
-}   
+}    
 
 // County Pie Chart
 export async function createPieChartForCountyTypes(fipsStateCode, fipsCountyCode) {
@@ -306,7 +306,7 @@ export async function createPieChartForCountyTypes(fipsStateCode, fipsCountyCode
     const height = 425; // Match county chart size
     const radius = Math.min(width, height - 100) / 2;
 
-    const container = d3.select("#svg-container3");
+    const container = d3.select("#svg-container2");
     container.select("svg").remove();
     container.select("#tooltip").remove();
     container.select("#chart-title").remove();
